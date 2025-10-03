@@ -115,9 +115,7 @@ describe("Product Controller Tests", () => {
         products: mockProducts,
       });
     });
-  });
 
-  describe("getProductController", () => {
     test("Valid Test: 1 Product", async () => {
       var mockProducts = makeProducts(1)
       setProducts(mockProducts);
@@ -135,9 +133,7 @@ describe("Product Controller Tests", () => {
         products: mockProducts,
       });
     });
-  });
 
-  describe("getProductController", () => {
       test("Valid Test: 12 Products", async () => {
         var mockProducts = makeProducts(12);
         setProducts(mockProducts);
@@ -155,9 +151,7 @@ describe("Product Controller Tests", () => {
           products: mockProducts,
         });
       });
-    });
 
-  describe("getProductController", () => {
     test("Valid Test: 13 Products", async () => {
       var mockProducts = makeProducts(13);
       console.log(mockProducts.length);
@@ -176,25 +170,24 @@ describe("Product Controller Tests", () => {
         products: mockProducts,
       });
     });
-  });
 
-  test("Invalid Test", async () => {
-    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    test("Invalid Test", async () => {
+      const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+      setProductsError();
 
-    setProductsError();
+      await getProductController(req, res);
 
-    await getProductController(req, res);
-
-    expect(logSpy).toHaveBeenCalled();
-    
-    const [firstArg] = logSpy.mock.calls[0];
-    expect(firstArg).toBeInstanceOf(Error);
-    expect(firstArg.message).toBe("DB Down");
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith({
-      success: false,
-      message: "Erorr in getting products",
-      error: "DB Down"
+      expect(logSpy).toHaveBeenCalled();
+      
+      const [firstArg] = logSpy.mock.calls[0];
+      expect(firstArg).toBeInstanceOf(Error);
+      expect(firstArg.message).toBe("DB Down");
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Erorr in getting products",
+        error: "DB Down"
+      });
     });
   });
 
