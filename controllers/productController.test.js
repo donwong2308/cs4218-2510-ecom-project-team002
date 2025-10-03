@@ -80,6 +80,14 @@ describe("Product Controller Tests", () => {
     return { calls: { populate, select, limit, sort } };
   };
 
+  const setProductsError = (errMsg = "DB Down") => {
+    const sort = jest.fn().mockRejectedValue(new Error(errMsg));
+    const limit = jest.fn().mockReturnValue({ sort });
+    const select = jest.fn().mockReturnValue({ limit, sort });
+    const populate = jest.fn().mockReturnValue({ select, limit, sort });
+    productModel.find.mockReturnValue({ populate, select, limit, sort });
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
@@ -90,11 +98,31 @@ describe("Product Controller Tests", () => {
   });
 
   describe("getProductController", () => {
+    test("Valid Test: No Products", async () => {
+      var mockProducts = makeProducts(0);
+      setProducts(mockProducts);
+      await getProductController(req, res);
+
+      mockProducts = mockProducts
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 12);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        countTotal: mockProducts.length,
+        message: "All Products",
+        products: mockProducts,
+      });
+    });
+  });
+
+  describe("getProductController", () => {
     test("Valid Test: 1 Product", async () => {
       var mockProducts = makeProducts(1)
       setProducts(mockProducts);
       await getProductController(req, res);
-      
+
       mockProducts = mockProducts
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 12);
@@ -149,4 +177,25 @@ describe("Product Controller Tests", () => {
       });
     });
   });
+
+  test("Invalid Test", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    setProductsError();
+
+    await getProductController(req, res);
+
+    expect(logSpy).toHaveBeenCalled();
+    
+    const [firstArg] = logSpy.mock.calls[0];
+    expect(firstArg).toBeInstanceOf(Error);
+    expect(firstArg.message).toBe("DB Down");
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      message: "Erorr in getting products",
+      error: "DB Down"
+    });
+  });
+
 })
