@@ -43,51 +43,6 @@ describe("Product Controller Tests", () => {
     return Array.from({ length: n }, (_, i) => makeProduct(i));
   };
 
-  const setProducts = (mockProducts) => {
-    let capturedLimit = 12;
-    let capturedSort = true;
-
-    const sort = jest.fn().mockImplementation((sortArg) => {
-      capturedSort = sortArg;
-
-      let arr = [...mockProducts];
-      if (capturedSort && capturedSort.createdAt) {
-        const dir = capturedSort.createdAt; // -1 or 1
-        arr.sort((a, b) => {
-          const at = new Date(a.createdAt).getTime();
-          const bt = new Date(b.createdAt).getTime();
-          return dir === -1 ? bt - at : at - bt;
-        });
-      }
-
-      if (typeof capturedLimit === "number") {
-        arr = arr.slice(0, capturedLimit);
-      }
-
-      return Promise.resolve(arr);
-    });
-
-    const limit = jest.fn().mockImplementation((n) => {
-      capturedLimit = n;
-      return { sort };
-    });
-
-    const select = jest.fn().mockReturnValue({ limit, sort });
-    const populate = jest.fn().mockReturnValue({ select, limit, sort });
-
-    productModel.find.mockReturnValue({ populate, select, limit, sort });
-
-    return { calls: { populate, select, limit, sort } };
-  };
-
-  const setProductsError = (errMsg = "DB Down") => {
-    const sort = jest.fn().mockRejectedValue(new Error(errMsg));
-    const limit = jest.fn().mockReturnValue({ sort });
-    const select = jest.fn().mockReturnValue({ limit, sort });
-    const populate = jest.fn().mockReturnValue({ select, limit, sort });
-    productModel.find.mockReturnValue({ populate, select, limit, sort });
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
     consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
@@ -98,6 +53,49 @@ describe("Product Controller Tests", () => {
   });
 
   describe("getProductController", () => {
+    const setProducts = (mockProducts) => {
+      let capturedLimit = 12;
+      let capturedSort = true;
+
+      const sort = jest.fn().mockImplementation((sortArg) => {
+        capturedSort = sortArg;
+
+        let arr = [...mockProducts];
+        if (capturedSort && capturedSort.createdAt) {
+          const dir = capturedSort.createdAt; // -1 or 1
+          arr.sort((a, b) => {
+            const at = new Date(a.createdAt).getTime();
+            const bt = new Date(b.createdAt).getTime();
+            return dir === -1 ? bt - at : at - bt;
+          });
+        }
+
+        if (typeof capturedLimit === "number") {
+          arr = arr.slice(0, capturedLimit);
+        }
+
+        return Promise.resolve(arr);
+      });
+
+      const limit = jest.fn().mockImplementation((n) => {
+        capturedLimit = n;
+        return { sort };
+      });
+
+      const select = jest.fn().mockReturnValue({ limit, sort });
+      const populate = jest.fn().mockReturnValue({ select, limit, sort });
+      productModel.find.mockReturnValue({ populate, select, limit, sort });
+      return { calls: { populate, select, limit, sort } };
+    };
+
+    const setProductsError = (errMsg = "DB Down") => {
+      const sort = jest.fn().mockRejectedValue(new Error(errMsg));
+      const limit = jest.fn().mockReturnValue({ sort });
+      const select = jest.fn().mockReturnValue({ limit, sort });
+      const populate = jest.fn().mockReturnValue({ select, limit, sort });
+      productModel.find.mockReturnValue({ populate, select, limit, sort });
+    };
+
     test("Valid Test: No Products", async () => {
       var mockProducts = makeProducts(0);
       setProducts(mockProducts);
@@ -187,6 +185,41 @@ describe("Product Controller Tests", () => {
         success: false,
         message: "Erorr in getting products",
         error: "DB Down"
+      });
+    });
+  });
+
+  describe("getSingleProductController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      req = { params: { slug: "product-0" } };
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    const setProduct = (mockProduct) => {
+      const populate = jest.fn().mockReturnValue({ mockProduct });
+      const select = jest.fn().mockReturnValue({ populate });
+      productModel.findOne.mockReturnValue({ select, populate });
+      return { calls: { populate, select } };
+    };
+
+    const setProductError = (errMsg = "DB Down") => {
+      const populate = jest.fn().mockReturnValue(new Error(errMsg));
+      const select = jest.fn().mockReturnValue({ populate });
+      productModel.findOne.mockReturnValue({ select, populate });
+    };
+
+    test("Valid Test: 1 Product", async () => {
+      var mockProduct = makeProduct(0);
+      setProduct(mockProduct);
+      
+      await getSingleProductController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        message: "Single Product Fetched",
+        product: { mockProduct: mockProduct },
       });
     });
   });
