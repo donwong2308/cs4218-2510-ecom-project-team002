@@ -43,16 +43,16 @@ describe("Product Controller Tests", () => {
     return Array.from({ length: n }, (_, i) => makeProduct(i));
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
-  })
-
-  afterAll(() => {
-    consoleSpy.mockRestore();
-  });
-
   describe("getProductController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+      consoleSpy.mockRestore();
+    });
+
     const setProducts = (mockProducts) => {
       let capturedLimit = 12;
       let capturedSort = true;
@@ -196,6 +196,10 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
+    afterAll(() => {
+      consoleSpy.mockRestore();
+    });
+
     const setProduct = (mockProduct) => {
       const populate = jest.fn().mockReturnValue({ mockProduct });
       const select = jest.fn().mockReturnValue({ populate });
@@ -204,10 +208,24 @@ describe("Product Controller Tests", () => {
     };
 
     const setProductError = (errMsg = "DB Down") => {
-      const populate = jest.fn().mockReturnValue(new Error(errMsg));
+      const populate = jest.fn().mockRejectedValue(new Error(errMsg));
       const select = jest.fn().mockReturnValue({ populate });
       productModel.findOne.mockReturnValue({ select, populate });
+      return { calls: { populate, select } };
     };
+
+    test("Valid Test: 0 Product", async () => {
+      setProductError();
+
+      await getSingleProductController(req, res);
+
+      // expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Eror while getitng single product",
+        error: "DB Down"
+      });
+    });
 
     test("Valid Test: 1 Product", async () => {
       var mockProduct = makeProduct(0);
@@ -220,6 +238,19 @@ describe("Product Controller Tests", () => {
         success: true,
         message: "Single Product Fetched",
         product: { mockProduct: mockProduct },
+      });
+    });
+
+    test("Invalid Test", async () => {
+      setProductError();
+
+      await getSingleProductController(req, res);
+
+      // expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Eror while getitng single product",
+        error: "DB Down",
       });
     });
   });

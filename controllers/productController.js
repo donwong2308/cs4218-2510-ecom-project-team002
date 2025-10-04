@@ -102,7 +102,7 @@ export const getSingleProductController = async (req, res) => {
     res.status(500).send({
       success: false,
       message: "Eror while getitng single product",
-      error,
+      error: error.message,
     });
   }
 };
