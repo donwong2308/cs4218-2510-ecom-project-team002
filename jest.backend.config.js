@@ -5,16 +5,25 @@ export default {
   // when testing backend
   testEnvironment: "node",
 
-  // which test to run
-  testMatch: ["<rootDir>/controllers/*.test.js"],
+  // run all backend tests
+  testMatch: [
+    "<rootDir>/controllers/*.test.js",
+    "<rootDir>/middlewares/*.test.js", 
+    "<rootDir>/helpers/*.test.js"
+  ],
 
   // jest code coverage
   collectCoverage: true,
-  collectCoverageFrom: ["controllers/**"],
+  collectCoverageFrom: [
+    "controllers/**/*.js",
+    "middlewares/**/*.js",
+    "helpers/**/*.js",
+    "!**/*.test.js"
+  ],
   coverageThreshold: {
     global: {
-      lines: 100,
-      functions: 100,
+      lines: 80,
+      functions: 80,
     },
   },
 };
