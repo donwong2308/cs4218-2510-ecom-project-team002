@@ -1,7 +1,3 @@
-# Ignore generated coverage reports
-/coverage/
-client/coverage/
-
 # Dependency directories
 node_modules/
 
