@@ -10,6 +10,13 @@ import Register from './Register';
 jest.mock('axios');
 jest.mock('react-hot-toast');
 
+// Mock react-icons to avoid rendering issues
+jest.mock('react-icons/bi', () => ({
+  BiMailSend: () => '<BiMailSend />',
+  BiPhoneCall: () => '<BiPhoneCall />',
+  BiSupport: () => '<BiSupport />'
+}));
+
 jest.mock('../../context/auth', () => ({
     useAuth: jest.fn(() => [null, jest.fn()]) // Mock useAuth hook to return null state and a mock function for setAuth
   }));

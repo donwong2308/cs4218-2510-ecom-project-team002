@@ -2,6 +2,40 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Contact from './Contact';
+import { AuthProvider } from '../context/auth';
+
+// Mock axios for API calls made by layout components
+jest.mock('axios', () => ({
+  get: jest.fn(() => Promise.resolve({ data: { category: [] } })),
+  defaults: {
+    headers: {
+      common: {}
+    }
+  }
+}));
+
+// Mock useCart hook since Header component uses it
+jest.mock('../context/cart', () => ({
+  useCart: () => [{ items: [] }, jest.fn()]
+}));
+
+// Mock useSearch hook since SearchInput component uses it
+jest.mock('../context/search', () => ({
+  useSearch: () => [{ keyword: '', results: [] }, jest.fn()]
+}));
+
+// Mock useCategory hook since Header component uses it
+jest.mock('../hooks/useCategory', () => ({
+  __esModule: true,
+  default: () => []
+}));
+
+// Mock react-icons to avoid rendering issues
+jest.mock('react-icons/bi', () => ({
+  BiMailSend: () => '<BiMailSend />',
+  BiPhoneCall: () => '<BiPhoneCall />',
+  BiSupport: () => '<BiSupport />'
+}));
 
 // Unit tests for the Contact page
 // These tests render the Contact page in isolation and assert that
@@ -15,7 +49,9 @@ describe('Contact Page', () => {
     // children inside Layout don't throw during test rendering.
     render(
       <MemoryRouter>
-        <Contact />
+        <AuthProvider>
+          <Contact />
+        </AuthProvider>
       </MemoryRouter>
     );
 
@@ -32,7 +68,9 @@ describe('Contact Page', () => {
   test('displays contact details (email, phone, support)', () => {
     render(
       <MemoryRouter>
-        <Contact />
+        <AuthProvider>
+          <Contact />
+        </AuthProvider>
       </MemoryRouter>
     );
 

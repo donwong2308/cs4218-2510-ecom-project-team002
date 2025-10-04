@@ -24,8 +24,8 @@ const Login = () => {
         email,
         password,
       });
-      if (res && res.data.success) {
-        toast.success(res.data && res.data.message, {
+      if (res && res.data && res.data.success) {
+        toast.success(res.data.message || "Login successful", {
             duration: 5000,
             icon: "🙏",
             style: {
@@ -41,11 +41,12 @@ const Login = () => {
         localStorage.setItem("auth", JSON.stringify(res.data));
         navigate(location.state || "/");
       } else {
-        toast.error(res.data.message);
+        toast.error(res.data?.message || "Login failed");
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong");
+      const errorMessage = error.response?.data?.message || "Something went wrong";
+      toast.error(errorMessage);
     }
   };
   return (

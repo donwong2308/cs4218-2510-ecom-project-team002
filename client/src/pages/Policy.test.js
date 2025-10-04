@@ -2,8 +2,40 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Policy from './Policy';
+import { AuthProvider } from '../context/auth';
 
-// Tests for the Policy page
+// Mock axios for API calls made by layout components
+jest.mock('axios', () => ({
+  get: jest.fn(() => Promise.resolve({ data: { category: [] } })),
+  defaults: {
+    headers: {
+      common: {}
+    }
+  }
+}));
+
+// Mock useCart hook since Header component uses it
+jest.mock('../context/cart', () => ({
+  useCart: () => [{ items: [] }, jest.fn()]
+}));
+
+// Mock useSearch hook since SearchInput component uses it
+jest.mock('../context/search', () => ({
+  useSearch: () => [{ keyword: '', results: [] }, jest.fn()]
+}));
+
+// Mock useCategory hook since Header component uses it  
+jest.mock('../hooks/useCategory', () => ({
+  __esModule: true,
+  default: () => []
+}));
+
+// Mock react-icons to avoid rendering issues
+jest.mock('react-icons/bi', () => ({
+  BiMailSend: () => '<BiMailSend />',
+  BiPhoneCall: () => '<BiPhoneCall />',
+  BiSupport: () => '<BiSupport />'
+}));// Tests for the Policy page
 // The Policy component uses the application's Layout component; rendering
 // inside MemoryRouter prevents any routing-related errors during tests.
 describe('Policy Page', () => {
@@ -11,7 +43,9 @@ describe('Policy Page', () => {
   test('renders policy image with correct alt text', () => {
     render(
       <MemoryRouter>
-        <Policy />
+        <AuthProvider>
+          <Policy />
+        </AuthProvider>
       </MemoryRouter>
     );
 
@@ -25,7 +59,9 @@ describe('Policy Page', () => {
   test('renders policy paragraphs', () => {
     render(
       <MemoryRouter>
-        <Policy />
+        <AuthProvider>
+          <Policy />
+        </AuthProvider>
       </MemoryRouter>
     );
 
