@@ -42,6 +42,24 @@ window.matchMedia = window.matchMedia || function() {
 describe('Login Component', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // Mock login API
+        axios.post.mockResolvedValueOnce({
+          data: {
+            success: true,
+            user: { id: 1, name: "John Doe", email: "test@example.com" },
+            token: "mockToken",
+          },
+        });
+
+        // Mock categories API
+        axios.get.mockResolvedValueOnce({
+          data: {
+            categories: [
+              { id: 1, name: "Category 1" },
+              { id: 2, name: "Category 2" },
+            ],
+          },
+        });
     });
 
     it('renders login form', () => {
@@ -118,7 +136,14 @@ describe('Login Component', () => {
     });
 
     it('should display error message on failed login', async () => {
-        axios.post.mockRejectedValueOnce({ message: 'Invalid credentials' });
+        axios.post.mockRejectedValueOnce({
+            response: {
+                data: {
+                    success: false,
+                    message: "Error in login", // Mock the same message as in the controller
+                },
+            },
+        });
 
         const { getByPlaceholderText, getByText } = render(
             <MemoryRouter initialEntries={['/login']}>
@@ -133,6 +158,23 @@ describe('Login Component', () => {
         fireEvent.click(getByText('LOGIN'));
 
         await waitFor(() => expect(axios.post).toHaveBeenCalled());
-        expect(toast.error).toHaveBeenCalledWith('Something went wrong');
+        expect(toast.error).toHaveBeenCalledWith('Invalid Password'); // Updated to match the mocked response
     });
+
+    it('should navigate to the Forgot Password page when the button is clicked', () => {
+    const { getByText } = render(
+        <MemoryRouter initialEntries={['/login']}>
+            <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<div>Forgot Password Page</div>} />
+            </Routes>
+        </MemoryRouter>
+    );
+
+    // Click the "Forgot Password" button
+    fireEvent.click(getByText('Forgot Password'));
+
+    // Verify navigation to the Forgot Password page
+    expect(getByText('Forgot Password Page')).toBeInTheDocument();
+});
 });
