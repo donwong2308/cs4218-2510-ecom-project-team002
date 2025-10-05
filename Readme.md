@@ -195,5 +195,5 @@ To begin unit testing with Jest in your project, follow these steps:
 - Donavon: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - Hao Wen
 - David
-- Zoe
+- Zoe: AI tools were used to generate unit test cases, mostly mocks
 - Zoebelle
