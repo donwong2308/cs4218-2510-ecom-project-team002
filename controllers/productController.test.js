@@ -169,14 +169,14 @@ describe("Product Controller Tests", () => {
       });
     });
 
-    test("Invalid Test", async () => {
+    test("Invalid Test: DB Down", async () => {
       const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
       setProductsError();
 
       await getProductController(req, res);
 
       expect(logSpy).toHaveBeenCalled();
-      
+
       const [firstArg] = logSpy.mock.calls[0];
       expect(firstArg).toBeInstanceOf(Error);
       expect(firstArg.message).toBe("DB Down");
@@ -184,7 +184,7 @@ describe("Product Controller Tests", () => {
       expect(res.send).toHaveBeenCalledWith({
         success: false,
         message: "Erorr in getting products",
-        error: "DB Down"
+        error: "DB Down",
       });
     });
   });
@@ -241,7 +241,7 @@ describe("Product Controller Tests", () => {
       });
     });
 
-    test("Invalid Test", async () => {
+    test("Invalid Test: DB Down", async () => {
       setProductError();
 
       await getSingleProductController(req, res);
@@ -282,7 +282,7 @@ describe("Product Controller Tests", () => {
     const setPhotoNone = (pid = "p1") => {
       const product = {
         _id: pid,
-        photo: {}, // or { data: null }
+        photo: {},
       };
       const select = jest.fn().mockResolvedValue(product);
       productModel.findById.mockReturnValue({ select });
@@ -307,7 +307,7 @@ describe("Product Controller Tests", () => {
       expect(res.send).toHaveBeenCalledWith(buf);
     });
 
-    test("Valid Test: Photo unavailable", async () => {
+    test("Invalid Test: Photo unavailable", async () => {
       const { pid } = setPhotoNone("p123");
       req = { params: { pid } };
 
@@ -320,7 +320,7 @@ describe("Product Controller Tests", () => {
       });
     });
 
-    test("Invalid Test", async () => {
+    test("Invalid Test: DB Down", async () => {
       setPhotoError();
 
       await productPhotoController(req, res);
@@ -334,4 +334,167 @@ describe("Product Controller Tests", () => {
     });
   });
 
+  describe("productFiltersController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+      consoleSpy.mockRestore();
+    });
+
+    const makeProduct = (i, cat) => ({
+      _id: `product-id-${i}`,
+      name: `Product ${i}`,
+      description: `Test Description ${i}`,
+      price: 10 + i,
+      category: cat
+    });
+
+    const setFiltersSuccess = (products = []) => {
+      const find = jest.fn().mockImplementation((args = {}) => {
+        let out = [...products];
+
+        if (args.category !== undefined) {
+          if (Array.isArray(args.category)) {
+            const set = new Set(args.category);
+            out = out.filter((p) => set.has(p.category));
+          } else if (typeof args.category === "object" && args.category.$in) {
+            const set = new Set(args.category.$in);
+            out = out.filter((p) => set.has(p.category));
+          } else {
+            out = out.filter((p) => p.category === args.category);
+          }
+        }
+
+        if (
+          args.price &&
+          (args.price.$gte != null || args.price.$lte != null)
+        ) {
+          const gte = args.price.$gte ?? -Infinity;
+          const lte = args.price.$lte ?? Infinity;
+          out = out.filter((p) => p.price >= gte && p.price <= lte);
+        }
+
+        return Promise.resolve(out);
+      });
+
+      productModel.find.mockImplementation(find);
+      return { calls: { find } };
+    };
+
+    const setFiltersError = (msg = "DB Down") => {
+      const find = jest.fn().mockRejectedValue(new Error(msg));
+      productModel.find.mockImplementation(find);
+      return { calls: { find } };
+    };
+
+    test("Valid Test: Filter All", async () => {
+      const checked = ["c1", "c2"];
+      const radio = [10, 20];
+
+      req = { body: { checked, radio } };
+
+      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      setFiltersSuccess(products);
+
+      await productFiltersController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        category: checked,
+        price: { $gte: 10, $lte: 20 },
+      });
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        products,
+      });
+    });
+
+    test("Valid Test: Filter price range too high", async () => {
+      const checked = ["c1", "c2"];
+      const radio = [12, 20];
+
+      req = { body: { checked, radio } };
+
+      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      setFiltersSuccess(products);
+
+      await productFiltersController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        category: checked,
+        price: { $gte: 12, $lte: 20 },
+      });
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        products: [],
+      });
+    });
+
+    test("Valid Test: Filter price range too low", async () => {
+      const checked = ["c1", "c2"];
+      const radio = [1, 9];
+
+      req = { body: { checked, radio } };
+
+      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      setFiltersSuccess(products);
+
+      await productFiltersController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        category: checked,
+        price: { $gte: 1, $lte: 9 },
+      });
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        products: [],
+      });
+    });
+
+    test("Valid Test: Filter different category", async () => {
+      const checked = ["c3"];
+      const radio = [10, 20];
+
+      req = { body: { checked, radio } };
+
+      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      setFiltersSuccess(products);
+
+      await productFiltersController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        category: checked,
+        price: { $gte: 10, $lte: 20 },
+      });
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        products: [],
+      });
+    });
+
+    test("Invalid Test: DB Down", async () => {
+      setFiltersError();
+
+      await productFiltersController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error WHile Filtering Products",
+        error: "DB Down",
+      });
+    });
+  });
+
+  
 })

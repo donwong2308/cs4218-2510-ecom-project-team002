@@ -213,7 +213,7 @@ export const productFiltersController = async (req, res) => {
     res.status(400).send({
       success: false,
       message: "Error WHile Filtering Products",
-      error,
+      error: error.message,
     });
   }
 };
@@ -230,7 +230,7 @@ export const productCountController = async (req, res) => {
     console.log(error);
     res.status(400).send({
       message: "Error in product count",
-      error,
+      error: error.message,
       success: false,
     });
   }
