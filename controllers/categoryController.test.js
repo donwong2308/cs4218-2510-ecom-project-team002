@@ -165,8 +165,9 @@ describe("categoryController", () => {
   describe("categoryControlller", () => {
     test("should get all categories and return 200", async () => {
       const mockCategories = [
-        { _id: "1", name: "Category 1", slug: "category-1" },
-        { _id: "2", name: "Category 2", slug: "category-2" }
+        { _id: "1", name: "Electronics", slug: "electronics" },
+        { _id: "2", name: "Clothing", slug: "clothing" },
+        { _id: "3", name: "Books", slug: "books" }
       ];
       categoryModel.find.mockResolvedValue(mockCategories);
 
@@ -203,15 +204,19 @@ describe("categoryController", () => {
 
   describe("singleCategoryController", () => {
     test("should get single category by slug and return 200", async () => {
-      const mockCategory = { _id: "1", name: "Test Category", slug: "test-category" };
+      const mockCategory = {
+        _id: "123",
+        name: "Electronics",
+        slug: "electronics"
+      };
       categoryModel.findOne.mockResolvedValue(mockCategory);
 
-      const req = { params: { slug: "test-category" } };
+      const req = { params: { slug: "electronics" } };
       const res = createRes();
 
       await singleCategoryController(req, res);
 
-      expect(categoryModel.findOne).toHaveBeenCalledWith({ slug: "test-category" });
+      expect(categoryModel.findOne).toHaveBeenCalledWith({ slug: "electronics" });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.send).toHaveBeenCalledWith({
         success: true,
@@ -223,7 +228,7 @@ describe("categoryController", () => {
     test("should handle errors and return 500", async () => {
       categoryModel.findOne.mockRejectedValue(new Error("Database error"));
 
-      const req = { params: { slug: "test-category" } };
+      const req = { params: { slug: "electronics" } };
       const res = createRes();
 
       await singleCategoryController(req, res);
