@@ -1,4 +1,4 @@
-import { createCategoryController, updateCategoryController, deleteCategoryCOntroller } from "./categoryController.js";
+import { createCategoryController, updateCategoryController, deleteCategoryController, categoryController, singleCategoryController } from "./categoryController.js";
 import categoryModel from "../models/categoryModel.js";
 import slugify from "slugify";
 
@@ -128,14 +128,14 @@ describe("categoryController", () => {
     });
   });
 
-  describe("deleteCategoryCOntroller", () => {
+  describe("deleteCategoryController", () => {
     test("should delete category and return 200", async () => {
       categoryModel.findByIdAndDelete.mockResolvedValue({});
 
       const req = { params: { id: "123" } };
       const res = createRes();
 
-      await deleteCategoryCOntroller(req, res);
+      await deleteCategoryController(req, res);
 
       expect(categoryModel.findByIdAndDelete).toHaveBeenCalledWith("123");
       expect(res.status).toHaveBeenCalledWith(200);
@@ -151,7 +151,7 @@ describe("categoryController", () => {
       const req = { params: { id: "123" } };
       const res = createRes();
 
-      await deleteCategoryCOntroller(req, res);
+      await deleteCategoryController(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.send).toHaveBeenCalledWith({
@@ -162,7 +162,7 @@ describe("categoryController", () => {
     });
   });
 
-  describe("categoryControlller", () => {
+  describe("categoryController", () => {
     test("should get all categories and return 200", async () => {
       const mockCategories = [
         { _id: "1", name: "Electronics", slug: "electronics" },
@@ -174,7 +174,7 @@ describe("categoryController", () => {
       const req = {};
       const res = createRes();
 
-      await categoryControlller(req, res);
+      await categoryController(req, res);
 
       expect(categoryModel.find).toHaveBeenCalledWith({});
       expect(res.status).toHaveBeenCalledWith(200);
@@ -191,7 +191,7 @@ describe("categoryController", () => {
         const req = {};
         const res = createRes();
   
-        await categoryControlller(req, res);
+        await categoryController(req, res);
   
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.send).toHaveBeenCalledWith({

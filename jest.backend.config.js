@@ -10,7 +10,7 @@ export default {
     "<rootDir>/controllers/*.test.js",
     "<rootDir>/middlewares/*.test.js", 
     "<rootDir>/helpers/*.test.js",
-    "<rootDir>/models/*.test.js"
+    "<rootDir>/models/*.test.js",
     "<rootDir>/config/*.test.js"
 
   ],
