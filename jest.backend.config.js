@@ -9,7 +9,10 @@ export default {
   testMatch: [
     "<rootDir>/controllers/*.test.js",
     "<rootDir>/middlewares/*.test.js", 
-    "<rootDir>/helpers/*.test.js"
+    "<rootDir>/helpers/*.test.js",
+    "<rootDir>/models/*.test.js"
+    "<rootDir>/config/*.test.js"
+
   ],
 
   // jest code coverage
@@ -18,6 +21,8 @@ export default {
     "controllers/**/*.js",
     "middlewares/**/*.js",
     "helpers/**/*.js",
+    "models/**/*.js",
+    "config/**/*.js",
     "!**/*.test.js"
   ],
   coverageThreshold: {
