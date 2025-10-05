@@ -246,10 +246,89 @@ describe("Product Controller Tests", () => {
 
       await getSingleProductController(req, res);
 
-      // expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.status).toHaveBeenCalledWith(500);
       expect(res.send).toHaveBeenCalledWith({
         success: false,
         message: "Eror while getitng single product",
+        error: "DB Down",
+      });
+    });
+  });
+
+  describe("productPhotoController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+      consoleSpy.mockRestore();
+    });
+
+    const setPhotoProduct = (
+      buf,
+      contentType = "image/jpeg",
+      pid = "p1"
+    ) => {
+      const product = {
+        _id: pid,
+        photo: { data: buf, contentType },
+      };
+      const select = jest.fn().mockResolvedValue(product);
+      productModel.findById.mockReturnValue({ select });
+      return { pid, product, calls: { select } };
+    };
+
+    const setPhotoNone = (pid = "p1") => {
+      const product = {
+        _id: pid,
+        photo: {}, // or { data: null }
+      };
+      const select = jest.fn().mockResolvedValue(product);
+      productModel.findById.mockReturnValue({ select });
+      return { pid, product, calls: { select } };
+    };
+
+    const setPhotoError = (msg = "DB Down", pid = "p1") => {
+      const select = jest.fn().mockRejectedValue(new Error(msg));
+      productModel.findById.mockReturnValue({ select });
+      return { pid, calls: { select } };
+    };
+
+    test("Valid Test: Photo available", async () => {
+      const buf = Buffer.from("image-data");
+      const { pid } = setPhotoProduct(buf, "image/jpeg", "p123");
+      req = { params: { pid } };
+
+      await productPhotoController(req, res);
+
+      expect(res.set).toHaveBeenCalledWith("Content-type", "image/jpeg");
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith(buf);
+    });
+
+    test("Valid Test: Photo unavailable", async () => {
+      const { pid } = setPhotoNone("p123");
+      req = { params: { pid } };
+
+      await productPhotoController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "There does not exist a photo",
+      });
+    });
+
+    test("Invalid Test", async () => {
+      setPhotoError();
+
+      await productPhotoController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Erorr while getting photo",
         error: "DB Down",
       });
     });
