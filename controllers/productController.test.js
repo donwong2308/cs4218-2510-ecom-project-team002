@@ -549,7 +549,7 @@ describe("Product Controller Tests", () => {
     });
   });
 
-  describe("productListController", () => {
+  describe("searchProductController", () => {
     const setListSuccess = (allProducts = []) => {
       let capturedSkip = 0;
       let capturedLimit = undefined;
@@ -666,6 +666,122 @@ describe("Product Controller Tests", () => {
       expect(res.send).toHaveBeenCalledWith({
         success: false,
         message: "Error in per page ctrl",
+        error: "DB Down",
+      });
+    });
+  });
+
+  describe("realtedProductController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+      consoleSpy.mockRestore();
+    });
+
+    const setRelatedSuccess = (allProducts = []) => {
+      let capturedLimit = null;
+
+      const populate = jest.fn().mockImplementation(() => {
+        return Promise.resolve(finalList);
+      });
+
+      let finalList = [];
+
+      const limit = jest.fn().mockImplementation((n) => {
+        capturedLimit = n;
+        finalList = intermediate.slice(0, capturedLimit ?? 3);
+        return { populate };
+      });
+
+      let intermediate = [];
+      const select = jest.fn().mockImplementation(() => {
+        return { limit, populate };
+      });
+ 
+      const find = jest.fn().mockImplementation((args = {}) => {
+        const { category, _id } = args;
+        const notId = _id?.$ne;
+
+        intermediate = allProducts.filter((p) => {
+          const catOk = category === undefined ? true : p.category === category;
+          const idOk = notId === undefined ? true : p._id !== notId;
+          return catOk && idOk;
+        });
+
+        return { select, limit, populate };
+      });
+
+      productModel.find.mockImplementation(find);
+
+      return { calls: { find, select, limit, populate } };
+    };
+
+    const makeProduct = (i, cat) => ({
+      _id: `product-id-${i}`,
+      name: `Product ${i}`,
+      description: `Test Description ${i}`,
+      price: 10 + i,
+      category: cat,
+    });
+
+    const setRelatedError = (msg = "DB Down") => {
+      const populate = jest.fn().mockRejectedValue(new Error(msg));
+      const limit = jest.fn().mockReturnValue({ populate });
+      const select = jest.fn().mockReturnValue({ limit, populate });
+      const find = jest.fn().mockReturnValue({ select, limit, populate });
+
+      productModel.find.mockImplementation(find);
+      return { calls: { find, select, limit, populate } };
+    };
+
+    test("Valid Test: Match pid and cid", async () => {
+      const pid = "p2";
+      const cid = "c1";
+      const all = [
+        makeProduct(0, "c1"),
+        makeProduct(1, "c2"),
+        makeProduct(2, "c1"),
+        makeProduct(3, "c1"),
+        makeProduct(4, "c1"),
+        makeProduct(5, "c2"),
+      ];
+      const { calls } = setRelatedSuccess(all);
+
+      req = { params: { pid: "p2", cid: "c1" } };
+
+      await realtedProductController(req, res);
+
+      const filtered = all
+        .filter((p) => p.category === cid && p._id !== pid)
+        .slice(0, 3);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        category: "c1",
+        _id: { $ne: "p2" },
+      });
+      expect(calls.select).toHaveBeenCalledWith("-photo");
+      expect(calls.limit).toHaveBeenCalledWith(3);
+      expect(calls.populate).toHaveBeenCalledWith("category");
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        products: filtered,
+      });
+    });
+
+    test("Invalid Test: DB Down", async () => {
+      setRelatedError();
+
+      await realtedProductController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error while geting related product",
         error: "DB Down",
       });
     });
