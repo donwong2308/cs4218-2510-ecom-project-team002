@@ -165,7 +165,25 @@ To begin unit testing with Jest in your project, follow these steps:
          4. testController
 
 - Hao Wen
-
+   - Features: Contact, Login, Payment, Policy, Registration, and Protected Routes
+   - Client related Files:
+      - components/Form/CategoryForm.js
+      - pages/admin/CreateCategory.js
+      - pages/admin/CreateProduct.js
+      - pages/admin/UpdateProduct.js
+      - components/AdminMenu.js
+      - pages/admin/AdminDashboard.js
+      - pages/admin/Products.js
+      - pages/user/Profile.js
+ - Server Related Files: 
+      - controllers/categoryController.js
+       1. createCategoryController
+       2. updateCategoryController
+       3. deleteCategoryController
+      - controllers/productController.js
+       1. createProductController
+       2. deleteProductController
+       3. updateProductController
 - David
 
 - Zoe
@@ -174,7 +192,7 @@ To begin unit testing with Jest in your project, follow these steps:
 
 ### AI Usage Declaration:
 - Donavon: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
-- Hao Wen
+- Hao Wen: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - David
 - Zoe
 - Zoebelle
