@@ -6,6 +6,8 @@ import productModel from '../models/productModel.js';
 import fs from 'fs';
 import slugify from 'slugify';
 
+import orderModel from "../models/orderModel.js"; //for payment unit test
+
 // Mock dependencies
 jest.mock('../models/productModel.js');
 jest.mock('fs');
@@ -355,14 +357,11 @@ describe('deleteProductController', () => {
     });
   });
 });
+
+//Donavon from here and below
+
 // Mock order model 
 jest.mock("../models/orderModel.js");
-
-import orderModel from "../models/orderModel.js";
-import { 
-  braintreeTokenController, 
-  brainTreePaymentController 
-} from "./productController.js";
 
 // Simple mock response and request factory functions
 const createRes = () => {
