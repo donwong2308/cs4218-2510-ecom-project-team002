@@ -169,6 +169,25 @@ To begin unit testing with Jest in your project, follow these steps:
 - David
 
 - Zoe
+   - Features: Product retrieval, Cart
+   - Client related Files:
+      - context/cart.js
+      - pages/CartPage.js
+      - pages/ProductDetails.js
+      - pages/CategoryProduct.js
+   - Server Related Files: 
+      - controllers/productController.js
+          1. getProductController
+          2. getSingleProductController
+          3. productPhotoController
+          4. productFiltersController
+          5. productCountController
+          6. productListController
+          7. searchProductController
+          8. realtedProductController
+          9. productCategoryController
+          - models/productModel.js
+      - models/productModel.js
 
 - Zoebelle
 
