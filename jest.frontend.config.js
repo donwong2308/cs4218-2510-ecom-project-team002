@@ -28,8 +28,8 @@ export default {
     "client/src/**/*.js",
     "!client/src/_site/**", // Exclude auto-generated files
     "!client/src/index.js",
-    "!client/src/reportWebVitals.js",
-    "!client/src/setupTests.js",
+    "!client/src/reportWebVitals.js", 
+    "!client/src/setupTests.js"
   ],
   coverageThreshold: {
     global: {

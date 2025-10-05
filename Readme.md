@@ -144,3 +144,37 @@ To begin unit testing with Jest in your project, follow these steps:
      ```bash
      npm run test
      ```
+
+## 6. GitHub Workflow: 
+**Link:** https://github.com/cs4218/cs4218-2510-ecom-project-team002/blob/main/.github/workflows/main.yml
+
+## 7. Scope of Members:
+- Donavon: 
+   - Features: Contact, Login, Payment, Policy, Registration, and Protected Routes
+   - Client related Files: pages/Contact.js, pages/Auth/Login.js, pages/Policy.js, context/auth.js, pages/Auth/Register.js
+   - Server Related Files: 
+      - controllers/productController.js
+         1. braintreeTokenController
+         2. brainTreePaymentController
+      - helpers/authHelper.js
+      - middlewares/authMiddleware.js
+      - controllers/authController.js
+         1. registerController
+         2. loginController
+         3. forgotPasswordController
+         4. testController
+
+- Hao Wen
+
+- David
+
+- Zoe
+
+- Zoebelle
+
+### AI Usage Declaration:
+- Donavon: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
+- Hao Wen
+- David
+- Zoe
+- Zoebelle

@@ -60,8 +60,8 @@ const Header = () => {
                       All Categories
                     </Link>
                   </li>
-                  {categories?.map((c) => (
-                    <li>
+                  {categories && Array.isArray(categories) && categories.map((c) => (
+                    <li key={c._id || c.slug || Math.random()}>
                       <Link
                         className="dropdown-item"
                         to={`/category/${c.slug}`}

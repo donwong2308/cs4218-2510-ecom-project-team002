@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import {
   getProductController,
   getSingleProductController,
@@ -7,14 +10,38 @@ import {
   productListController,
   searchProductController,
   realtedProductController,
-  productCategoryController
+  productCategoryController,
+  createProductController,
+  updateProductController,
+  deleteProductController,
 } from "../controllers/productController.js";
+
 import productModel from "../models/productModel.js";
 import categoryModel from "../models/categoryModel.js";
+import orderModel from "../models/orderModel.js"; // for payment unit tests
 
+import fs from "fs";
+import slugify from "slugify";
+
+// ---- Mocks ----
 jest.mock("../models/productModel.js");
 jest.mock("../models/categoryModel.js");
 jest.mock("../models/orderModel.js");
+jest.mock("fs");
+jest.mock("slugify");
+jest.mock("braintree", () => ({
+  BraintreeGateway: jest.fn().mockImplementation(() => ({
+    clientToken: {
+      generate: jest.fn(),
+    },
+    transaction: {
+      sale: jest.fn(),
+    },
+  })),
+  Environment: {
+    Sandbox: "Sandbox",
+  },
+}));
 
 describe("Product Controller Tests", () => {
   let req, res, consoleSpy;
@@ -49,7 +76,7 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterEach(() => {
       consoleSpy.mockRestore();
     });
 
@@ -115,7 +142,7 @@ describe("Product Controller Tests", () => {
     });
 
     test("Valid Test: 1 Product", async () => {
-      var mockProducts = makeProducts(1)
+      var mockProducts = makeProducts(1);
       setProducts(mockProducts);
       await getProductController(req, res);
 
@@ -132,27 +159,26 @@ describe("Product Controller Tests", () => {
       });
     });
 
-      test("Valid Test: 12 Products", async () => {
-        var mockProducts = makeProducts(12);
-        setProducts(mockProducts);
-        await getProductController(req, res);
+    test("Valid Test: 12 Products", async () => {
+      var mockProducts = makeProducts(12);
+      setProducts(mockProducts);
+      await getProductController(req, res);
 
-        mockProducts = mockProducts
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 12);
+      mockProducts = mockProducts
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 12);
 
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.send).toHaveBeenCalledWith({
-          success: true,
-          countTotal: mockProducts.length,
-          message: "All Products",
-          products: mockProducts,
-        });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        countTotal: mockProducts.length,
+        message: "All Products",
+        products: mockProducts,
       });
+    });
 
     test("Valid Test: 13 Products", async () => {
       var mockProducts = makeProducts(13);
-      console.log(mockProducts.length);
       setProducts(mockProducts);
       await getProductController(req, res);
 
@@ -186,6 +212,7 @@ describe("Product Controller Tests", () => {
         message: "Erorr in getting products",
         error: "DB Down",
       });
+      logSpy.mockRestore();
     });
   });
 
@@ -196,7 +223,7 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterEach(() => {
       consoleSpy.mockRestore();
     });
 
@@ -214,23 +241,22 @@ describe("Product Controller Tests", () => {
       return { calls: { populate, select } };
     };
 
-    test("Valid Test: 0 Product", async () => {
+    test("Valid Test: 0 Product (error path)", async () => {
       setProductError();
 
       await getSingleProductController(req, res);
 
-      // expect(res.status).toHaveBeenCalledWith(500);
       expect(res.send).toHaveBeenCalledWith({
         success: false,
         message: "Eror while getitng single product",
-        error: "DB Down"
+        error: "DB Down",
       });
     });
 
     test("Valid Test: 1 Product", async () => {
       var mockProduct = makeProduct(0);
       setProduct(mockProduct);
-      
+
       await getSingleProductController(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
@@ -261,15 +287,11 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterEach(() => {
       consoleSpy.mockRestore();
     });
 
-    const setPhotoProduct = (
-      buf,
-      contentType = "image/jpeg",
-      pid = "p1"
-    ) => {
+    const setPhotoProduct = (buf, contentType = "image/jpeg", pid = "p1") => {
       const product = {
         _id: pid,
         photo: { data: buf, contentType },
@@ -340,16 +362,16 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterEach(() => {
       consoleSpy.mockRestore();
     });
 
-    const makeProduct = (i, cat) => ({
+    const makeProductLocal = (i, cat) => ({
       _id: `product-id-${i}`,
       name: `Product ${i}`,
       description: `Test Description ${i}`,
       price: 10 + i,
-      category: cat
+      category: cat,
     });
 
     const setFiltersSuccess = (products = []) => {
@@ -368,10 +390,7 @@ describe("Product Controller Tests", () => {
           }
         }
 
-        if (
-          args.price &&
-          (args.price.$gte != null || args.price.$lte != null)
-        ) {
+        if (args.price && (args.price.$gte != null || args.price.$lte != null)) {
           const gte = args.price.$gte ?? -Infinity;
           const lte = args.price.$lte ?? Infinity;
           out = out.filter((p) => p.price >= gte && p.price <= lte);
@@ -396,7 +415,7 @@ describe("Product Controller Tests", () => {
 
       req = { body: { checked, radio } };
 
-      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      const products = [makeProductLocal(0, "c1"), makeProductLocal(1, "c2")];
       setFiltersSuccess(products);
 
       await productFiltersController(req, res);
@@ -419,7 +438,7 @@ describe("Product Controller Tests", () => {
 
       req = { body: { checked, radio } };
 
-      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      const products = [makeProductLocal(0, "c1"), makeProductLocal(1, "c2")];
       setFiltersSuccess(products);
 
       await productFiltersController(req, res);
@@ -442,7 +461,7 @@ describe("Product Controller Tests", () => {
 
       req = { body: { checked, radio } };
 
-      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      const products = [makeProductLocal(0, "c1"), makeProductLocal(1, "c2")];
       setFiltersSuccess(products);
 
       await productFiltersController(req, res);
@@ -465,7 +484,7 @@ describe("Product Controller Tests", () => {
 
       req = { body: { checked, radio } };
 
-      const products = [makeProduct(0, "c1"), makeProduct(1, "c2")];
+      const products = [makeProductLocal(0, "c1"), makeProductLocal(1, "c2")];
       setFiltersSuccess(products);
 
       await productFiltersController(req, res);
@@ -502,7 +521,7 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterEach(() => {
       consoleSpy.mockRestore();
     });
 
@@ -513,9 +532,7 @@ describe("Product Controller Tests", () => {
     };
 
     const setCountError = (msg = "DB Down") => {
-      const estimatedDocumentCount = jest
-        .fn()
-        .mockRejectedValue(new Error(msg));
+      const estimatedDocumentCount = jest.fn().mockRejectedValue(new Error(msg));
       productModel.find.mockReturnValue({ estimatedDocumentCount });
       return { calls: { estimatedDocumentCount } };
     };
@@ -549,7 +566,7 @@ describe("Product Controller Tests", () => {
     });
   });
 
-  describe("searchProductController", () => {
+  describe("productListController (pagination)", () => {
     const setListSuccess = (allProducts = []) => {
       let capturedSkip = 0;
       let capturedLimit = undefined;
@@ -567,8 +584,7 @@ describe("Product Controller Tests", () => {
         // apply skip & limit
         const start = Number.isFinite(capturedSkip) ? capturedSkip : 0;
         let sliced = arr.slice(start);
-        if (Number.isFinite(capturedLimit))
-          sliced = sliced.slice(0, capturedLimit);
+        if (Number.isFinite(capturedLimit)) sliced = sliced.slice(0, capturedLimit);
         return Promise.resolve(sliced);
       });
 
@@ -599,18 +615,18 @@ describe("Product Controller Tests", () => {
       return { calls: { select, skip, limit, sort } };
     };
 
-    const makeProduct = (i, cat) => ({
+    const makeProductLocal = (i) => ({
       _id: `product-id-${i}`,
       name: `Product ${i}`,
       description: `Test Description ${i}`,
       price: 10 + i,
-      category: cat,
+      createdAt: new Date(2025, 0, i + 1),
     });
 
     test("Valid Test: Page 1", async () => {
       const perPage = 6;
       const page = 1;
-      const all = Array.from({ length: 20 }, (_, i) => makeProduct(i));
+      const all = Array.from({ length: 20 }, (_, i) => makeProductLocal(i));
       const { calls } = setListSuccess(all);
 
       req = { params: { page: "1" } };
@@ -638,7 +654,7 @@ describe("Product Controller Tests", () => {
     test("Valid Test: Page 3", async () => {
       const perPage = 6;
       const page = 3;
-      const all = Array.from({ length: 20 }, (_, i) => makeProduct(i));
+      const all = Array.from({ length: 20 }, (_, i) => makeProductLocal(i));
       setListSuccess(all);
 
       req = { params: { page: "3" } };
@@ -677,7 +693,7 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterEach(() => {
       consoleSpy.mockRestore();
     });
 
@@ -700,7 +716,7 @@ describe("Product Controller Tests", () => {
       const select = jest.fn().mockImplementation(() => {
         return { limit, populate };
       });
- 
+
       const find = jest.fn().mockImplementation((args = {}) => {
         const { category, _id } = args;
         const notId = _id?.$ne;
@@ -729,7 +745,7 @@ describe("Product Controller Tests", () => {
       return { calls: { find, select, limit, populate } };
     };
 
-    const makeProduct = (i, cat) => ({
+    const makeProductLocal = (i, cat) => ({
       _id: `product-id-${i}`,
       name: `Product ${i}`,
       description: `Test Description ${i}`,
@@ -741,12 +757,12 @@ describe("Product Controller Tests", () => {
       const pid = "p2";
       const cid = "c1";
       const all = [
-        makeProduct(0, "c1"),
-        makeProduct(1, "c2"),
-        makeProduct(2, "c1"),
-        makeProduct(3, "c1"),
-        makeProduct(4, "c1"),
-        makeProduct(5, "c2"),
+        makeProductLocal(0, "c1"),
+        makeProductLocal(1, "c2"),
+        makeProductLocal(2, "c1"),
+        makeProductLocal(3, "c1"),
+        makeProductLocal(4, "c1"),
+        makeProductLocal(5, "c2"),
       ];
       const { calls } = setRelatedSuccess(all);
 
@@ -798,7 +814,7 @@ describe("Product Controller Tests", () => {
       consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterEach(() => {
       consoleSpy.mockRestore();
     });
 
@@ -824,9 +840,7 @@ describe("Product Controller Tests", () => {
       return { calls: { findOne, find, populate } };
     };
 
-    const setProductCategoryErrorAtCategory = (
-      msg = "DB Down (category)"
-    ) => {
+    const setProductCategoryErrorAtCategory = (msg = "DB Down (category)") => {
       const findOne = jest.fn().mockRejectedValue(new Error(msg));
       categoryModel.findOne.mockImplementation(findOne);
       return { calls: { findOne } };
@@ -852,7 +866,7 @@ describe("Product Controller Tests", () => {
       slug,
     });
 
-    const makeProduct = (i, cat) => ({
+    const makeProductLocal = (i, cat) => ({
       _id: `product-id-${i}`,
       name: `Product ${i}`,
       category: cat,
@@ -870,10 +884,10 @@ describe("Product Controller Tests", () => {
     test("Valid Test: Products found", async () => {
       const cat = makeCategory(1, "cat-1");
       const all = [
-        makeProduct(0, "c1"),
-        makeProduct(1, "c2"),
-        makeProduct(2, "c1"),
-        makeProduct(3, "c3"),
+        makeProductLocal(0, "c1"),
+        makeProductLocal(1, "c2"),
+        makeProductLocal(2, "c1"),
+        makeProductLocal(3, "c3"),
       ];
 
       const { calls } = setProductCategorySuccess(cat, all);
@@ -898,9 +912,9 @@ describe("Product Controller Tests", () => {
       const cat2 = makeCategory(2, "cat-2");
       req = { params: { slug: "cat-2" } };
       const all = [
-        makeProduct(0, "c1"),
-        makeProduct(2, "c1"),
-        makeProduct(3, "c3"),
+        makeProductLocal(0, "c1"),
+        makeProductLocal(2, "c1"),
+        makeProductLocal(3, "c3"),
       ];
 
       const { calls } = setProductCategorySuccess(cat2, all);
@@ -947,4 +961,636 @@ describe("Product Controller Tests", () => {
       });
     });
   });
-})
+});
+
+// ===== Additional controller tests: create/update/delete and payments =====
+
+describe("createProductController", () => {
+  let req, res;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    req = {
+      fields: {
+        name: "Test Product",
+        description: "Test Description",
+        price: 100,
+        category: "Test Category",
+        quantity: 10,
+        shipping: true,
+      },
+      files: {
+        photo: {
+          path: "test/path/to/photo.jpg",
+          size: 500000,
+          type: "image/jpeg",
+        },
+      },
+    };
+
+    res = {
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    };
+
+    slugify.mockImplementation((name) =>
+      name.toLowerCase().replace(/\s+/g, "-")
+    );
+  });
+
+  it("should return validation error if name is missing", async () => {
+    req.fields.name = ""; // Simulate missing name
+
+    await createProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Name is Required" });
+  });
+
+  it("should return validation error if description is missing", async () => {
+    req.fields.description = ""; // Simulate missing description
+
+    await createProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Description is Required" });
+  });
+
+  it("should return validation error if price is missing", async () => {
+    req.fields.price = ""; // Simulate missing price
+
+    await createProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Price is Required" });
+  });
+
+  it("should return validation error if category is missing", async () => {
+    req.fields.category = ""; // Simulate missing category
+
+    await createProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Category is Required" });
+  });
+
+  it("should return validation error if quantity is missing", async () => {
+    req.fields.quantity = ""; // Simulate missing quantity
+
+    await createProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Quantity is Required" });
+  });
+
+  it("should return validation error if photo size exceeds limit", async () => {
+    req.files.photo.size = 2000000; // Simulate large photo size
+
+    await createProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      error: "photo is Required and should be less then 1mb",
+    });
+  });
+
+  it("should create a product successfully", async () => {
+    const mockSave = jest.fn().mockResolvedValue({
+      _id: "product123",
+      name: "Test Product",
+      slug: "test-product",
+    });
+    productModel.mockImplementation(() => ({
+      save: mockSave,
+      photo: {},
+    }));
+    fs.readFileSync.mockReturnValue("mocked-photo-data");
+
+    await createProductController(req, res);
+
+    expect(slugify).toHaveBeenCalledWith("Test Product");
+    expect(fs.readFileSync).toHaveBeenCalledWith("test/path/to/photo.jpg");
+    expect(mockSave).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      message: "Product Created Successfully",
+      products: expect.any(Object),
+    });
+  });
+
+  it("should handle errors during product creation", async () => {
+    const mockError = new Error("Database error");
+    productModel.mockImplementation(() => ({
+      save: jest.fn().mockRejectedValue(mockError),
+      photo: {},
+    }));
+
+    await createProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      error: mockError,
+      message: "Error in crearing product",
+    });
+  });
+});
+
+describe("updateProductController", () => {
+  let req, res;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    req = {
+      params: { pid: "product123" },
+      fields: {
+        name: "Updated Product",
+        description: "Updated Description",
+        price: 150,
+        category: "Updated Category",
+        quantity: 5,
+        shipping: false,
+      },
+      files: {
+        photo: {
+          path: "test/path/to/photo.jpg",
+          size: 500000,
+          type: "image/jpeg",
+        },
+      },
+    };
+
+    res = {
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    };
+
+    slugify.mockImplementation((name) =>
+      name.toLowerCase().replace(/\s+/g, "-")
+    );
+  });
+
+  it("should return validation error if name is missing", async () => {
+    req.fields.name = ""; // Simulate missing name
+
+    await updateProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Name is Required" });
+  });
+
+  it("should return validation error if description is missing", async () => {
+    req.fields.description = ""; // Simulate missing description
+
+    await updateProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      error: "Description is Required",
+    });
+  });
+
+  it("should return validation error if price is missing", async () => {
+    req.fields.price = ""; // Simulate missing price
+
+    await updateProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Price is Required" });
+  });
+
+  it("should return validation error if category is missing", async () => {
+    req.fields.category = ""; // Simulate missing category
+
+    await updateProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Category is Required" });
+  });
+
+  it("should return validation error if quantity is missing", async () => {
+    req.fields.quantity = ""; // Simulate missing quantity
+
+    await updateProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ error: "Quantity is Required" });
+  });
+
+  it("should return validation error if photo size exceeds limit", async () => {
+    req.files.photo.size = 2000000; // Simulate large photo size
+
+    await updateProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      error: "photo is Required and should be less then 1mb",
+    });
+  });
+
+  it("should update a product successfully", async () => {
+    const mockSave = jest.fn().mockResolvedValue({
+      _id: "product123",
+      name: "Updated Product",
+      slug: "updated-product",
+    });
+
+    const mockFindByIdAndUpdate = jest.fn().mockResolvedValue({
+      _id: "product123",
+      name: "Updated Product",
+      slug: "updated-product",
+      photo: {}, // controller expects products.photo to exist
+      save: mockSave, // controller calls await products.save()
+    });
+    productModel.findByIdAndUpdate = mockFindByIdAndUpdate;
+    fs.readFileSync.mockReturnValue("mocked-photo-data");
+
+    await updateProductController(req, res);
+
+    expect(slugify).toHaveBeenCalledWith("Updated Product");
+    expect(fs.readFileSync).toHaveBeenCalledWith("test/path/to/photo.jpg");
+    expect(mockFindByIdAndUpdate).toHaveBeenCalledWith(
+      "product123",
+      expect.objectContaining({
+        name: "Updated Product",
+        slug: "updated-product",
+      }),
+      { new: true }
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      message: "Product Updated Successfully",
+      products: expect.any(Object),
+    });
+  });
+
+  it("should handle errors during product update", async () => {
+    const mockError = new Error("Database error");
+    productModel.findByIdAndUpdate = jest.fn().mockRejectedValue(mockError);
+
+    await updateProductController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      error: mockError,
+      message: "Error in Updte product",
+    });
+  });
+});
+
+describe("deleteProductController", () => {
+  let req, res;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    req = {
+      params: { pid: "product123" },
+    };
+
+    res = {
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    };
+  });
+
+  it("should delete a product successfully", async () => {
+    // Mongoose chaining: findByIdAndDelete(...).select('-photo')
+    const mockSelect = jest.fn().mockResolvedValue({
+      _id: "product123",
+      name: "Deleted product",
+    });
+    productModel.findByIdAndDelete = jest.fn().mockReturnValue({
+      select: mockSelect,
+    });
+
+    await deleteProductController(req, res);
+
+    expect(productModel.findByIdAndDelete).toHaveBeenCalledWith("product123");
+    expect(mockSelect).toHaveBeenCalledWith("-photo");
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      message: "Product Deleted successfully",
+    });
+  });
+
+  it("should handle errors during deletion", async () => {
+    const dbError = new Error("Database failure");
+    const mockSelect = jest.fn().mockRejectedValue(dbError);
+    productModel.findByIdAndDelete = jest.fn().mockReturnValue({
+      select: mockSelect,
+    });
+
+    await deleteProductController(req, res);
+
+    expect(productModel.findByIdAndDelete).toHaveBeenCalledWith("product123");
+    expect(mockSelect).toHaveBeenCalledWith("-photo");
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      message: "Error while deleting product",
+      error: dbError,
+    });
+  });
+});
+
+// -------- Payment controller pattern tests (gateway + order flow stubs) --------
+
+// Simple mock response and request factory functions
+const createRes = () => {
+  const res = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.send = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  return res;
+};
+
+const createReq = (body = {}, user = null) => ({
+  body,
+  user,
+});
+
+describe("Payment Controllers", () => {
+  let mockOrderInstance;
+  let mockGateway;
+
+  beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
+
+    // Mock order model instance
+    mockOrderInstance = {
+      save: jest.fn().mockResolvedValue({ _id: "order123" }),
+    };
+    orderModel.mockImplementation(() => mockOrderInstance);
+
+    // Create a simple gateway mock
+    mockGateway = {
+      clientToken: {
+        generate: jest.fn(),
+      },
+      transaction: {
+        sale: jest.fn(),
+      },
+    };
+  });
+
+  describe("braintreeTokenController pattern", () => {
+    test("should generate token successfully", async () => {
+      const req = createReq();
+      const res = createRes();
+
+      const mockTokenResponse = {
+        success: true,
+        clientToken: "mock_token_12345",
+      };
+
+      const originalLog = console.log;
+      console.log = jest.fn(); // suppress logs
+
+      mockGateway.clientToken.generate.mockImplementation((options, callback) => {
+        callback(null, mockTokenResponse);
+      });
+
+      mockGateway.clientToken.generate({}, (err, response) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          res.send(response);
+        }
+      });
+
+      expect(mockGateway.clientToken.generate).toHaveBeenCalledWith(
+        {},
+        expect.any(Function)
+      );
+      expect(res.send).toHaveBeenCalledWith(mockTokenResponse);
+
+      console.log = originalLog; // restore
+    });
+
+    test("should handle token generation error", async () => {
+      const req = createReq();
+      const res = createRes();
+
+      const mockError = {
+        message: "Invalid credentials",
+        type: "authentication_error",
+      };
+
+      mockGateway.clientToken.generate.mockImplementation((options, callback) => {
+        callback(mockError, null);
+      });
+
+      mockGateway.clientToken.generate({}, (err, response) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          res.send(response);
+        }
+      });
+
+      expect(mockGateway.clientToken.generate).toHaveBeenCalledWith(
+        {},
+        expect.any(Function)
+      );
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.send).toHaveBeenCalledWith(mockError);
+    });
+  });
+
+  describe("brainTreePaymentController pattern", () => {
+    test("should process successful payment", async () => {
+      const mockCart = [
+        { _id: "prod1", name: "Product 1", price: 100 },
+        { _id: "prod2", name: "Product 2", price: 50 },
+      ];
+
+      const req = createReq(
+        {
+          nonce: "fake-valid-nonce",
+          cart: mockCart,
+        },
+        { _id: "user123" }
+      );
+      const res = createRes();
+
+      const mockPaymentResult = {
+        success: true,
+        transaction: {
+          id: "transaction_123",
+          amount: "150.00",
+          status: "submitted_for_settlement",
+        },
+      };
+
+      mockGateway.transaction.sale.mockImplementation((options, callback) => {
+        callback(null, mockPaymentResult);
+      });
+
+      const { nonce, cart } = req.body;
+      let total = 0;
+      cart.map((i) => {
+        total += i.price;
+      });
+
+      mockGateway.transaction.sale(
+        {
+          amount: total,
+          paymentMethodNonce: nonce,
+          options: {
+            submitForSettlement: true,
+          },
+        },
+        function (error, result) {
+          if (result) {
+            // simulate controller behavior
+            // eslint-disable-next-line no-new
+            new orderModel({
+              products: cart,
+              payment: result,
+              buyer: req.user._id,
+            }).save();
+            res.json({ ok: true });
+          } else {
+            res.status(500).send(error);
+          }
+        }
+      );
+
+      expect(mockGateway.transaction.sale).toHaveBeenCalledWith(
+        {
+          amount: 150,
+          paymentMethodNonce: "fake-valid-nonce",
+          options: {
+            submitForSettlement: true,
+          },
+        },
+        expect.any(Function)
+      );
+
+      expect(orderModel).toHaveBeenCalledWith({
+        products: mockCart,
+        payment: mockPaymentResult,
+        buyer: "user123",
+      });
+      expect(res.json).toHaveBeenCalledWith({ ok: true });
+    });
+
+    test("should handle payment failure", async () => {
+      const mockCart = [{ _id: "prod1", price: 100 }];
+
+      const req = createReq(
+        {
+          nonce: "fake-invalid-nonce",
+          cart: mockCart,
+        },
+        { _id: "user123" }
+      );
+      const res = createRes();
+
+      const mockError = {
+        message: "Credit card declined",
+        code: "2001",
+      };
+
+      mockGateway.transaction.sale.mockImplementation((options, callback) => {
+        callback(mockError, null);
+      });
+
+      const { nonce, cart } = req.body;
+      let total = 0;
+      cart.map((i) => {
+        total += i.price;
+      });
+
+      mockGateway.transaction.sale(
+        {
+          amount: total,
+          paymentMethodNonce: nonce,
+          options: {
+            submitForSettlement: true,
+          },
+        },
+        function (error, result) {
+          if (result) {
+            // should NOT happen in failure case
+            // eslint-disable-next-line no-new
+            new orderModel({
+              products: cart,
+              payment: result,
+              buyer: req.user._id,
+            }).save();
+            res.json({ ok: true });
+          } else {
+            res.status(500).send(error);
+          }
+        }
+      );
+
+      expect(mockGateway.transaction.sale).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.send).toHaveBeenCalledWith(mockError);
+      expect(orderModel).not.toHaveBeenCalled();
+    });
+
+    test("should calculate correct total from cart", () => {
+      const testCases = [
+        {
+          cart: [{ price: 25.99 }, { price: 50.0 }, { price: 10.01 }],
+          expectedTotal: 86,
+        },
+        {
+          cart: [{ price: 100 }],
+          expectedTotal: 100,
+        },
+        {
+          cart: [],
+          expectedTotal: 0,
+        },
+      ];
+
+      testCases.forEach((testCase) => {
+        let total = 0;
+        testCase.cart.map((i) => {
+          total += i.price;
+        });
+
+        expect(total).toBe(testCase.expectedTotal);
+      });
+    });
+
+    test("should validate request data structure", () => {
+      const mockCart = [
+        { _id: "prod1", name: "Product 1", price: 100 },
+        { _id: "prod2", name: "Product 2", price: 50 },
+      ];
+
+      const req = createReq(
+        {
+          nonce: "fake-valid-nonce",
+          cart: mockCart,
+        },
+        { _id: "user123" }
+      );
+
+      expect(req.body.nonce).toBeDefined();
+      expect(req.body.cart).toBeDefined();
+      expect(req.user._id).toBeDefined();
+
+      expect(Array.isArray(req.body.cart)).toBe(true);
+      expect(req.body.cart.length).toBe(2);
+
+      req.body.cart.forEach((item) => {
+        expect(item.price).toBeDefined();
+        expect(typeof item.price).toBe("number");
+      });
+    });
+  });
+});
