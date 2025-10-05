@@ -549,4 +549,125 @@ describe("Product Controller Tests", () => {
     });
   });
 
+  describe("productListController", () => {
+    const setListSuccess = (allProducts = []) => {
+      let capturedSkip = 0;
+      let capturedLimit = undefined;
+
+      const sort = jest.fn().mockImplementation((sortArg) => {
+        let arr = [...allProducts];
+        if (sortArg?.createdAt) {
+          const dir = sortArg.createdAt;
+          arr.sort((a, b) =>
+            dir === -1
+              ? new Date(b.createdAt) - new Date(a.createdAt)
+              : new Date(a.createdAt) - new Date(b.createdAt)
+          );
+        }
+        // apply skip & limit
+        const start = Number.isFinite(capturedSkip) ? capturedSkip : 0;
+        let sliced = arr.slice(start);
+        if (Number.isFinite(capturedLimit))
+          sliced = sliced.slice(0, capturedLimit);
+        return Promise.resolve(sliced);
+      });
+
+      const limit = jest.fn().mockImplementation((n) => {
+        capturedLimit = n;
+        return { sort };
+      });
+
+      const skip = jest.fn().mockImplementation((n) => {
+        capturedSkip = n;
+        return { limit, sort };
+      });
+
+      const select = jest.fn().mockReturnValue({ skip, limit, sort });
+
+      productModel.find.mockReturnValue({ select, skip, limit, sort });
+
+      return { calls: { select, skip, limit, sort } };
+    };
+
+    const setListError = (msg = "DB Down") => {
+      const sort = jest.fn().mockRejectedValue(new Error(msg));
+      const limit = jest.fn().mockReturnValue({ sort });
+      const skip = jest.fn().mockReturnValue({ limit, sort });
+      const select = jest.fn().mockReturnValue({ skip, limit, sort });
+
+      productModel.find.mockReturnValue({ select, skip, limit, sort });
+      return { calls: { select, skip, limit, sort } };
+    };
+
+    const makeProduct = (i, cat) => ({
+      _id: `product-id-${i}`,
+      name: `Product ${i}`,
+      description: `Test Description ${i}`,
+      price: 10 + i,
+      category: cat,
+    });
+
+    test("Valid Test: Page 1", async () => {
+      const perPage = 6;
+      const page = 1;
+      const all = Array.from({ length: 20 }, (_, i) => makeProduct(i));
+      const { calls } = setListSuccess(all);
+
+      req = { params: { page: "1" } };
+
+      await productListController(req, res);
+
+      const sorted = [...all].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      const page1 = sorted.slice((page - 1) * perPage, page * perPage);
+
+      expect(productModel.find).toHaveBeenCalledWith({});
+      expect(calls.select).toHaveBeenCalledWith("-photo");
+      expect(calls.skip).toHaveBeenCalledWith(0);
+      expect(calls.limit).toHaveBeenCalledWith(6);
+      expect(calls.sort).toHaveBeenCalledWith({ createdAt: -1 });
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        products: page1,
+      });
+    });
+
+    test("Valid Test: Page 3", async () => {
+      const perPage = 6;
+      const page = 3;
+      const all = Array.from({ length: 20 }, (_, i) => makeProduct(i));
+      setListSuccess(all);
+
+      req = { params: { page: "3" } };
+
+      await productListController(req, res);
+
+      const sorted = [...all].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      const page3 = sorted.slice((page - 1) * perPage, page * perPage);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        products: page3,
+      });
+    });
+
+    test("Invalid Test: DB Down", async () => {
+      setListError();
+
+      await productListController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error in per page ctrl",
+        error: "DB Down",
+      });
+    });
+  });
 })
