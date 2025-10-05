@@ -566,7 +566,7 @@ describe("Product Controller Tests", () => {
     });
   });
 
-  describe("productListController (pagination)", () => {
+  describe("productListController", () => {
     const setListSuccess = (allProducts = []) => {
       let capturedSkip = 0;
       let capturedLimit = undefined;
@@ -686,6 +686,153 @@ describe("Product Controller Tests", () => {
       });
     });
   });
+
+  describe("searchProductController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleSpy.mockRestore();
+    });
+
+    const makeProductLocal = (
+      i,
+      name = `Product ${i}`,
+      description = `Test Description ${i}`
+    ) => ({
+      _id: `product-id-${i}`,
+      name,
+      description,
+      price: 10 + i,
+    });
+
+    const setSearchSuccess = (allProducts = []) => {
+      const find = jest.fn().mockImplementation((query = {}) => {
+        const ors = query?.$or ?? [];
+        // emulate case-insensitive substring match used by $regex with "i"
+        const kw = (
+          ors[0]?.name?.$regex ??
+          ors[1]?.description?.$regex ??
+          ""
+        ).toString();
+        const needle = kw.toLowerCase();
+
+        const filtered = allProducts.filter(
+          (p) =>
+            (p.name || "").toLowerCase().includes(needle) ||
+            (p.description || "").toLowerCase().includes(needle)
+        );
+
+        const select = jest.fn().mockResolvedValue(filtered);
+        return { select };
+      });
+
+      productModel.find.mockImplementation(find);
+      return { calls: { find } };
+    };
+
+    const setSearchError = (msg = "DB Down") => {
+      const select = jest.fn().mockRejectedValue(new Error(msg));
+      const find = jest.fn().mockReturnValue({ select });
+      productModel.find.mockImplementation(find);
+      return { calls: { find, select } };
+    };
+
+    test("Valid Test: matches by name (case-insensitive)", async () => {
+      const keyword = "lapTOP";
+      req = { params: { keyword } };
+
+      const all = [
+        makeProductLocal(0, "Laptop Stand", "Metal riser"),
+        makeProductLocal(1, "Mouse", "Wireless laptop mouse"),
+        makeProductLocal(2, "Keyboard", "Mechanical"),
+      ];
+      setSearchSuccess(all);
+
+      await searchProductController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        $or: [
+          { name: { $regex: keyword, $options: "i" } },
+          { description: { $regex: keyword, $options: "i" } },
+        ],
+      });
+      // get the select mock from the first find call and assert "-photo"
+      const selectMock = productModel.find.mock.results[0].value.select;
+      expect(selectMock).toHaveBeenCalledWith("-photo");
+
+      expect(res.json).toHaveBeenCalledWith([all[0], all[1]]);
+    });
+
+    test("Valid Test: matches by description only", async () => {
+      const keyword = "carbon fiber";
+      req = { params: { keyword } };
+
+      const all = [
+        makeProductLocal(0, "Frame", "Ultra-light carbon fiber body"),
+        makeProductLocal(1, "Bottle", "Stainless steel"),
+      ];
+      setSearchSuccess(all);
+
+      await searchProductController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        $or: [
+          { name: { $regex: keyword, $options: "i" } },
+          { description: { $regex: keyword, $options: "i" } },
+        ],
+      });
+
+      expect(res.json).toHaveBeenCalledWith([all[0]]);
+    });
+
+    test("Valid Test: no matches returns empty list", async () => {
+      const keyword = "nonexistent";
+      req = { params: { keyword } };
+
+      const all = [
+        makeProductLocal(0, "Chair", "Wooden"),
+        makeProductLocal(1, "Table", "Glass"),
+      ];
+      setSearchSuccess(all);
+
+      await searchProductController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        $or: [
+          { name: { $regex: keyword, $options: "i" } },
+          { description: { $regex: keyword, $options: "i" } },
+        ],
+      });
+
+      expect(res.json).toHaveBeenCalledWith([]);
+    });
+
+    test("Invalid Test: DB Down", async () => {
+      const keyword = "anything";
+      req = { params: { keyword } };
+      setSearchError("DB Down");
+
+      await searchProductController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({
+        $or: [
+          { name: { $regex: keyword, $options: "i" } },
+          { description: { $regex: keyword, $options: "i" } },
+        ],
+      });
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error In Search Product API",
+        error: "DB Down",
+      });
+    });
+  });
+
 
   describe("realtedProductController", () => {
     beforeEach(() => {
