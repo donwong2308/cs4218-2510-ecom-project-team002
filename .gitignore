@@ -1,5 +1,5 @@
 # ignore code coverage files
-/coverage
+coverage/
 
 # Dependency directories
 node_modules/
