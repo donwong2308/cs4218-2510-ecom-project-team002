@@ -1,4 +1,4 @@
-import { createCategoryController, updateCategoryController, deleteCategoryCOntroller, categoryControlller, singleCategoryController } from "./categoryController.js";
+import { createCategoryController, updateCategoryController, deleteCategoryCOntroller } from "./categoryController.js";
 import categoryModel from "../models/categoryModel.js";
 import slugify from "slugify";
 
