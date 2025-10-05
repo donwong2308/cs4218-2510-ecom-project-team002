@@ -45,6 +45,9 @@ const Login = () => {
       }
     } catch (error) {
       console.log(error);
+      // Bug Fix: Improved error handling based on unit test findings
+      // Unit tests revealed need for more robust error message extraction
+      // Now safely extracts error message from response or provides fallback
       const errorMessage = error.response?.data?.message || "Something went wrong";
       toast.error(errorMessage);
     }

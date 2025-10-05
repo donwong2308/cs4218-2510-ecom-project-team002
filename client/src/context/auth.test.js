@@ -4,7 +4,15 @@ import { AuthProvider, useAuth } from './auth';
 import axios from 'axios';
 
 // Mock axios to control its behavior in tests
-jest.mock('axios');
+jest.mock('axios', () => ({
+  default: {
+    defaults: {
+      headers: {
+        common: {}
+      }
+    }
+  }
+}));
 
 // Mock localStorage since it's not available in the Jest test environment
 const mockLocalStorage = {
@@ -61,6 +69,16 @@ describe('Authentication Context', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLocalStorage.getItem.mockReturnValue(null);
+    // Initialize axios defaults properly for each test
+    if (!axios.defaults) {
+      axios.defaults = {};
+    }
+    if (!axios.defaults.headers) {
+      axios.defaults.headers = {};
+    }
+    if (!axios.defaults.headers.common) {
+      axios.defaults.headers.common = {};
+    }
     delete axios.defaults.headers.common['Authorization'];
   });
 
