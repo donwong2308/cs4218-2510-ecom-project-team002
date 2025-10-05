@@ -175,7 +175,7 @@ To begin unit testing with Jest in your project, follow these steps:
       - pages/admin/AdminDashboard.js
       - pages/admin/Products.js
       - pages/user/Profile.js
- - Server Related Files: 
+    - Server Related Files: 
       - controllers/categoryController.js
        1. createCategoryController
        2. updateCategoryController
