@@ -719,14 +719,6 @@ describe("Product Controller Tests", () => {
       return { calls: { find, select, limit, populate } };
     };
 
-    const makeProduct = (i, cat) => ({
-      _id: `product-id-${i}`,
-      name: `Product ${i}`,
-      description: `Test Description ${i}`,
-      price: 10 + i,
-      category: cat,
-    });
-
     const setRelatedError = (msg = "DB Down") => {
       const populate = jest.fn().mockRejectedValue(new Error(msg));
       const limit = jest.fn().mockReturnValue({ populate });
@@ -736,6 +728,14 @@ describe("Product Controller Tests", () => {
       productModel.find.mockImplementation(find);
       return { calls: { find, select, limit, populate } };
     };
+
+    const makeProduct = (i, cat) => ({
+      _id: `product-id-${i}`,
+      name: `Product ${i}`,
+      description: `Test Description ${i}`,
+      price: 10 + i,
+      category: cat,
+    });
 
     test("Valid Test: Match pid and cid", async () => {
       const pid = "p2";
@@ -783,6 +783,167 @@ describe("Product Controller Tests", () => {
         success: false,
         message: "Error while geting related product",
         error: "DB Down",
+      });
+    });
+  });
+
+  describe("productCategoryController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      req = { params: { slug: "cat-1" } };
+      res = {
+        status: jest.fn().mockReturnThis(),
+        send: jest.fn().mockReturnThis(),
+      };
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+      consoleSpy.mockRestore();
+    });
+
+    const setProductCategorySuccess = (categoryDoc, allProducts = []) => {
+      const findOne = jest.fn().mockResolvedValue(categoryDoc);
+      categoryModel.findOne.mockImplementation(findOne);
+
+      const catId = categoryDoc?._id ?? categoryDoc;
+      const belongsToCat = (p) => {
+        const c = p.category;
+        if (c && typeof c === "object") return String(c._id) === String(catId);
+        return String(c) === String(catId);
+      };
+
+      const populate = jest
+        .fn()
+        .mockResolvedValue(allProducts.filter(belongsToCat));
+      const find = jest.fn().mockImplementation((args = {}) => {
+        return { populate };
+      });
+      productModel.find.mockImplementation(find);
+
+      return { calls: { findOne, find, populate } };
+    };
+
+    const setProductCategoryErrorAtCategory = (
+      msg = "DB Down (category)"
+    ) => {
+      const findOne = jest.fn().mockRejectedValue(new Error(msg));
+      categoryModel.findOne.mockImplementation(findOne);
+      return { calls: { findOne } };
+    };
+
+    const setProductCategoryErrorAtProducts = (
+      categoryDoc,
+      msg = "DB Down (products)"
+    ) => {
+      const findOne = jest.fn().mockResolvedValue(categoryDoc);
+      categoryModel.findOne.mockImplementation(findOne);
+
+      const populate = jest.fn().mockRejectedValue(new Error(msg));
+      const find = jest.fn().mockReturnValue({ populate });
+      productModel.find.mockImplementation(find);
+
+      return { calls: { findOne, find, populate } };
+    };
+
+    const makeCategory = (i, slug = `cat-${i}`) => ({
+      _id: `c${i}`,
+      name: `Cat ${i}`,
+      slug,
+    });
+
+    const makeProduct = (i, cat) => ({
+      _id: `product-id-${i}`,
+      name: `Product ${i}`,
+      category: cat,
+    });
+
+    const belongsTo = (p, cat) => {
+      const pid =
+        typeof p.category === "object" && p.category !== null
+          ? String(p.category._id)
+          : String(p.category);
+      const cid = String(cat._id);
+      return pid === cid;
+    };
+
+    test("Valid Test: Products found", async () => {
+      const cat = makeCategory(1, "cat-1");
+      const all = [
+        makeProduct(0, "c1"),
+        makeProduct(1, "c2"),
+        makeProduct(2, "c1"),
+        makeProduct(3, "c3"),
+      ];
+
+      const { calls } = setProductCategorySuccess(cat, all);
+
+      await productCategoryController(req, res);
+
+      const filtered = all.filter((p) => belongsTo(p, cat));
+
+      expect(categoryModel.findOne).toHaveBeenCalledWith({ slug: "cat-1" });
+      expect(productModel.find).toHaveBeenCalledWith({ category: cat });
+      expect(calls.populate).toHaveBeenCalledWith("category");
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        category: cat,
+        products: filtered,
+      });
+    });
+
+    test("Valid Test: Products not found", async () => {
+      const cat2 = makeCategory(2, "cat-2");
+      req = { params: { slug: "cat-2" } };
+      const all = [
+        makeProduct(0, "c1"),
+        makeProduct(2, "c1"),
+        makeProduct(3, "c3"),
+      ];
+
+      const { calls } = setProductCategorySuccess(cat2, all);
+
+      await productCategoryController(req, res);
+
+      const filtered = all.filter((p) => belongsTo(p, cat2));
+
+      expect(categoryModel.findOne).toHaveBeenCalledWith({ slug: "cat-2" });
+      expect(productModel.find).toHaveBeenCalledWith({ category: cat2 });
+      expect(calls.populate).toHaveBeenCalledWith("category");
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        category: cat2,
+        products: filtered,
+      });
+    });
+
+    test("Invalid Test: DB Down (category)", async () => {
+      setProductCategoryErrorAtCategory();
+
+      await productCategoryController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error While Getting products",
+        error: "DB Down (category)",
+      });
+    });
+
+    test("Invalid Test: DB Down (products)", async () => {
+      setProductCategoryErrorAtProducts();
+
+      await productCategoryController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error While Getting products",
+        error: "DB Down (products)",
       });
     });
   });
