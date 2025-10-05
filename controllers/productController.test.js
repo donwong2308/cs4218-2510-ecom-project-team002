@@ -496,5 +496,57 @@ describe("Product Controller Tests", () => {
     });
   });
 
-  
+  describe("productCountController", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+      consoleSpy.mockRestore();
+    });
+
+    const setCountSuccess = (total = 42) => {
+      const estimatedDocumentCount = jest.fn().mockResolvedValue(total);
+      productModel.find.mockReturnValue({ estimatedDocumentCount });
+      return { calls: { estimatedDocumentCount }, total };
+    };
+
+    const setCountError = (msg = "DB Down") => {
+      const estimatedDocumentCount = jest
+        .fn()
+        .mockRejectedValue(new Error(msg));
+      productModel.find.mockReturnValue({ estimatedDocumentCount });
+      return { calls: { estimatedDocumentCount } };
+    };
+
+    test("Valid Test", async () => {
+      const { calls, total } = setCountSuccess(123);
+
+      await productCountController(req, res);
+
+      expect(productModel.find).toHaveBeenCalledWith({});
+      expect(calls.estimatedDocumentCount).toHaveBeenCalledTimes(1);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.send).toHaveBeenCalledWith({
+        success: true,
+        total: total,
+      });
+    });
+
+    test("Invalid Test: DB Down", async () => {
+      setCountError();
+
+      await productCountController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error in product count",
+        error: "DB Down",
+      });
+    });
+  });
+
 })
