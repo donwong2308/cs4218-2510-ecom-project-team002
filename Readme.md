@@ -189,10 +189,32 @@ To begin unit testing with Jest in your project, follow these steps:
 - Zoe
 
 - Zoebelle
+   -Features: Category Listing & Single-Category View, Site Layout, Spinner UX, Static Pages, Global Search
+
+   -Client Related Files:
+      -hooks/useCategory.js
+      -pages/Categories.js
+      -components/Header.js, 
+      -components/Footer.js
+      -components/Layout.js
+      -components/Spinner.js
+      -pages/About.js
+      -pages/Pagenotfound.js
+      -components/Form/SearchInput.js
+      -context/search.js
+      -pages/Search.js
+
+   -Server Related Files:
+      -controllers/categoryController.js
+         1.categoryControlller
+         2.singleCategoryController
+      -models/categoryModel.js
+      -config/db.js`
+
 
 ### AI Usage Declaration:
 - Donavon: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - Hao Wen: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - David
 - Zoe
-- Zoebelle
+- Zoebelle: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
