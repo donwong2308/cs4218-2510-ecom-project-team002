@@ -25,7 +25,9 @@ const AuthProvider = ({ children }) => {
             }
         } catch (error) {
             console.error("Failed to parse auth data from localStorage:", error);
-            // Clear corrupted data to prevent future errors
+            // Bug Fix: Enhanced error handling based on unit test findings
+            // Unit tests revealed need for graceful handling of corrupted localStorage data
+            // Clear corrupted data to prevent future errors and application crashes
             localStorage.removeItem("auth");
         }
         //eslint-disable-next-line

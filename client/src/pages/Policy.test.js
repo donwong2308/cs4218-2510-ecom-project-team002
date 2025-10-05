@@ -1,3 +1,29 @@
+/**
+ * Policy Page Unit Tests
+ * 
+ * Test File: Policy.test.js
+ * Component Under Test: Policy.js
+ * 
+ * Testing Strategy:
+ * - Output-based testing: Verifies UI elements and content are rendered correctly
+ * - State-based testing: Ensures component structure and placeholder content display
+ * 
+ * Testing Techniques Used:
+ * - Mocks: External dependencies (axios, context hooks, icons) isolated for testing
+ * - Stubs: Controlled return values for context hooks and API calls
+ * - Fakes: MemoryRouter provides fake routing environment for testing
+ * 
+ * Test Coverage:
+ * - Hero image rendering and accessibility
+ * - Policy content placeholder verification
+ * - Layout integration validation
+ * 
+ * Bug Analysis:
+ * ✅ No bugs found in Policy.js - component renders placeholder content correctly
+ * ⚠️ Note: Component currently shows placeholder text "add privacy policy"
+ * ✅ Layout integration and image display work properly
+ */
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -35,11 +61,30 @@ jest.mock('react-icons/bi', () => ({
   BiMailSend: () => '<BiMailSend />',
   BiPhoneCall: () => '<BiPhoneCall />',
   BiSupport: () => '<BiSupport />'
-}));// Tests for the Policy page
-// The Policy component uses the application's Layout component; rendering
-// inside MemoryRouter prevents any routing-related errors during tests.
+}));/**
+ * Unit Tests for Policy Page Component
+ * 
+ * The Policy component integrates with the application's Layout component
+ * which includes navigation and routing elements. MemoryRouter wrapping
+ * prevents routing-related errors during isolated testing.
+ * 
+ * Current State: Policy page contains placeholder content that should
+ * eventually be replaced with actual privacy policy text.
+ */
 describe('Policy Page', () => {
-  // Verify the hero image and its accessible alt text are present
+  /**
+   * Test: Policy Page Hero Image Rendering
+   * 
+   * Test Type: Output-based testing (UI element verification)
+   * Purpose: Ensures the hero image is displayed with correct attributes
+   * 
+   * What it tests:
+   * - Image element presence and accessibility (alt text)
+   * - Correct image source path (/images/contactus.jpeg)
+   * - Image src attribute validation
+   * 
+   * Bug Status: ✅ No bugs found - image renders with correct attributes
+   */
   test('renders policy image with correct alt text', () => {
     render(
       <MemoryRouter>
@@ -55,7 +100,22 @@ describe('Policy Page', () => {
     expect(img).toHaveAttribute('src', '/images/contactus.jpeg');
   });
 
-  // Verify that the actual policy content paragraphs are rendered
+  /**
+   * Test: Policy Content Placeholder Verification
+   * 
+   * Test Type: Output-based testing (content verification)
+   * Purpose: Validates that placeholder policy content is displayed
+   * 
+   * Current Implementation:
+   * - Component renders multiple "add privacy policy" placeholder paragraphs
+   * - Test verifies at least one placeholder paragraph exists
+   * 
+   * Future Consideration:
+   * - This test should be updated when actual privacy policy content is added
+   * - Current test serves as validation that content area is functional
+   * 
+   * Bug Status: ✅ No bugs found - placeholder content renders as expected
+   */
   test('renders policy paragraphs', () => {
     render(
       <MemoryRouter>

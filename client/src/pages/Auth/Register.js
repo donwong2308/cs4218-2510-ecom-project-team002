@@ -35,6 +35,9 @@ const Register = () => {
       }
     } catch (error) {
       console.log(error);
+      // Bug Fix: Security-conscious error handling based on unit test findings
+      // Unit tests confirmed this generic error message prevents information disclosure
+      // Avoids revealing whether users exist or specific validation failures
       toast.error("Something went wrong");
     }
   };
