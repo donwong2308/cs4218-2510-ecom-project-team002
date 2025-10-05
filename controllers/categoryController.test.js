@@ -167,7 +167,7 @@ describe("categoryController", () => {
       const mockCategories = [
         { _id: "1", name: "Electronics", slug: "electronics" },
         { _id: "2", name: "Clothing", slug: "clothing" },
-        { _id: "3", name: "Books", slug: "books" }
+        { _id: "3", name: "Books", slug: "books" },
       ];
       categoryModel.find.mockResolvedValue(mockCategories);
 
@@ -186,59 +186,59 @@ describe("categoryController", () => {
     });
 
     test("should handle errors and return 500", async () => {
-      categoryModel.find.mockRejectedValue(new Error("Database error"));
-
-      const req = {};
-      const res = createRes();
-
-      await categoryControlller(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.send).toHaveBeenCalledWith({
-        success: false,
-        error: expect.any(Error),
-        message: "Error while getting all categories",
-      });
-    });
-  });
-
-  describe("singleCategoryController", () => {
-    test("should get single category by slug and return 200", async () => {
-      const mockCategory = {
-        _id: "123",
-        name: "Electronics",
-        slug: "electronics"
-      };
-      categoryModel.findOne.mockResolvedValue(mockCategory);
-
-      const req = { params: { slug: "electronics" } };
-      const res = createRes();
-
-      await singleCategoryController(req, res);
-
-      expect(categoryModel.findOne).toHaveBeenCalledWith({ slug: "electronics" });
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.send).toHaveBeenCalledWith({
-        success: true,
-        message: "Get SIngle Category SUccessfully",
-        category: mockCategory,
+        categoryModel.find.mockRejectedValue(new Error("Database error"));
+  
+        const req = {};
+        const res = createRes();
+  
+        await categoryControlller(req, res);
+  
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.send).toHaveBeenCalledWith({
+          success: false,
+          error: expect.any(Error),
+          message: "Error while getting all categories",
+        });
       });
     });
 
-    test("should handle errors and return 500", async () => {
-      categoryModel.findOne.mockRejectedValue(new Error("Database error"));
-
-      const req = { params: { slug: "electronics" } };
-      const res = createRes();
-
-      await singleCategoryController(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.send).toHaveBeenCalledWith({
-        success: false,
-        error: expect.any(Error),
-        message: "Error While getting Single Category",
+    describe("singleCategoryController", () => {
+        test("should get single category by slug and return 200", async () => {
+          const mockCategory = {
+            _id: "123",
+            name: "Electronics",
+            slug: "electronics",
+          };
+          categoryModel.findOne.mockResolvedValue(mockCategory);
+    
+          const req = { params: { slug: "electronics" } };
+          const res = createRes();
+    
+          await singleCategoryController(req, res);
+    
+          expect(categoryModel.findOne).toHaveBeenCalledWith({ slug: "electronics" });
+          expect(res.status).toHaveBeenCalledWith(200);
+          expect(res.send).toHaveBeenCalledWith({
+            success: true,
+            message: "Get SIngle Category SUccessfully",
+            category: mockCategory,
+          });
+        });
+    
+        test("should handle errors and return 500", async () => {
+          categoryModel.findOne.mockRejectedValue(new Error("Database error"));
+    
+          const req = { params: { slug: "electronics" } };
+          const res = createRes();
+    
+          await singleCategoryController(req, res);
+    
+          expect(res.status).toHaveBeenCalledWith(500);
+          expect(res.send).toHaveBeenCalledWith({
+            success: false,
+            error: expect.any(Error),
+            message: "Error While getting Single Category",
+          });
+        });
       });
-    });
-  });
 });
