@@ -146,7 +146,7 @@ To begin unit testing with Jest in your project, follow these steps:
      ```
 
 ## 6. GitHub Workflow: 
-**Link:** https://github.com/cs4218/cs4218-2510-ecom-project-team002/blob/main/.github/workflows/main.yml
+**CI Link:** https://github.com/cs4218/cs4218-2510-ecom-project-team002/actions/runs/18268024940/job/52005362576
 
 ## 7. Scope of Members:
 - Donavon: 
