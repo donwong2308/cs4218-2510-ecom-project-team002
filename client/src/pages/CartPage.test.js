@@ -97,7 +97,7 @@ describe("CartPage", () => {
 
     expect(screen.getByText("Your Cart Is Empty")).toBeInTheDocument();
     expect(screen.getByText("Hello Guest")).toBeInTheDocument();
-    expect(screen.getByText("Total: $0.00")).toBeInTheDocument();
+    expect(screen.getByText("Total : $0.00")).toBeInTheDocument();
   });
 
   test("renders empty cart message when cart is empty - logged in", async () => {
@@ -144,7 +144,7 @@ describe("CartPage", () => {
     for (const p of mockProducts) {
       expect(screen.getByText(p.name)).toBeInTheDocument();
       expect(
-        screen.getByText(p.description.split(" ").slice(0, 10).join(" "))
+        screen.getByText(p.description.split(" ").slice(0, 30).join(" "))
       ).toBeInTheDocument();
       expect(screen.getByText(`Price: $${p.price}`)).toBeInTheDocument();
       expect(screen.getByText(`Quantity: ${p.quantity}`)).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe("CartPage", () => {
 
     await renderCartPage(mockProducts, { name: "X", address: "Y" });
 
-    expect(screen.getByText("Total: $300.00")).toBeInTheDocument();
+    expect(screen.getByText("Total : $300.00")).toBeInTheDocument();
   });
 
   test("handles price calculation error gracefully", async () => {
