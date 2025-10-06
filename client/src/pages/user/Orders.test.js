@@ -2,75 +2,49 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Orders from "./Orders";
-import { useAuth } from "../../context/auth";
 import axios from "axios";
+import { useAuth } from "../../context/auth";
 
-// Mock dependencies
+// Mock dependencies with different configurations
 jest.mock("axios");
-jest.mock("../../context/auth");
+jest.mock("../../context/auth", () => ({
+  useAuth: jest.fn(),
+}));
+jest.mock("../../components/UserMenu", () => () => <div>UserMenu</div>);
+jest.mock("../../components/Layout", () => ({ children, title }) => (
+  <div data-testid="layout" data-title={title}>
+    {children}
+  </div>
+));
 jest.mock("moment", () => {
   const mockMoment = jest.fn(() => ({
-    fromNow: () => "a few seconds ago",
+    fromNow: () => "2 days ago",
   }));
   mockMoment.tz = jest.fn();
   return mockMoment;
 });
 
-// Mock UserMenu component
-jest.mock("../../components/UserMenu", () => {
-  return function MockUserMenu() {
-    return <div data-testid="user-menu">User Menu</div>;
-  };
-});
-
-// Mock Layout component
-jest.mock("../../components/Layout", () => {
-  return function MockLayout({ children, title }) {
-    return (
-      <div data-testid="mock-layout" data-title={title}>
-        {children}
-      </div>
-    );
-  };
-});
-
 describe("Orders Component", () => {
-  // Mock data
-  const mockOrders = [
+  const mockOrdersData = [
     {
-      _id: "order1",
-      status: "Processing",
-      buyer: { name: "Test User" },
-      createAt: "2023-09-22T10:00:00Z",
+      _id: "order123",
+      status: "Delivered",
+      buyer: { name: "Alice Johnson" },
+      createAt: "2023-10-01T14:30:00Z",
       payment: { success: true },
       products: [
         {
-          _id: "product1",
-          name: "Test Product 1",
+          _id: "product456",
+          name: "Wireless Headphones",
           description:
-            "This is a test product description that is longer than 30 characters for substring testing.",
+            "High-quality wireless headphones with noise cancellation technology for premium audio experience",
+          price: 299.99,
+        },
+        {
+          _id: "product789",
+          name: "Smartphone Case",
+          description: "Durable protective case",
           price: 29.99,
-        },
-        {
-          _id: "product2",
-          name: "Test Product 2",
-          description: "Another test product description.",
-          price: 49.99,
-        },
-      ],
-    },
-    {
-      _id: "order2",
-      status: "Shipped",
-      buyer: { name: "Another User" },
-      createAt: "2023-09-20T15:30:00Z",
-      payment: { success: false },
-      products: [
-        {
-          _id: "product3",
-          name: "Test Product 3",
-          description: "Yet another test product description.",
-          price: 19.99,
         },
       ],
     },
@@ -78,563 +52,410 @@ describe("Orders Component", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Mock authentication context
-    useAuth.mockReturnValue([
-      { user: { name: "Test User" }, token: "test-token" },
-      jest.fn(),
-    ]);
-
-    // Mock axios responses
-    axios.get.mockResolvedValue({ data: mockOrders });
   });
 
-  test("renders the orders page with correct title", async () => {
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
+  // Initial Conditions & State Transitions
+  describe("Initial Conditions & State Transitions", () => {
+    it("should render with initial empty state when no token provided", () => {
+      useAuth.mockReturnValue([{ token: null }, jest.fn()]);
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+      expect(screen.getByText(/All Orders/i)).toBeInTheDocument();
+      expect(screen.getByText(/UserMenu/i)).toBeInTheDocument();
+    });
 
-    // Check if the layout has the correct title
-    const layout = screen.getByTestId("mock-layout");
-    expect(layout).toBeInTheDocument();
-    expect(layout.getAttribute("data-title")).toBe("Your Orders");
+    it("should fetch orders automatically when valid auth token exists", async () => {
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: mockOrdersData });
 
-    // Check if UserMenu is rendered
-    expect(screen.getByTestId("user-menu")).toBeInTheDocument();
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    // Check if the heading is rendered
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
-  });
+      await waitFor(() =>
+        expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders")
+      );
+    });
 
-  test("calls getOrders when component mounts with auth token", async () => {
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
+    it("should not trigger API call when auth token is undefined", async () => {
+      useAuth.mockReturnValue([{ token: undefined }, jest.fn()]);
 
-    // Verify API call was made
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(axios.get).not.toHaveBeenCalled();
     });
   });
 
-  test("does not call getOrders when no auth token is present", async () => {
-    // Mock auth without token
-    useAuth.mockReturnValueOnce([{ user: { name: "Test User" } }, jest.fn()]);
+  // Rendered Output & Data Presentation
+  describe("Rendered Output & Data Presentation", () => {
+    it("should display complete order information when orders are successfully loaded", async () => {
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: mockOrdersData });
 
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    // Wait a bit to ensure the effect has run
-    await new Promise((resolve) => setTimeout(resolve, 0));
+      // Check order status and buyer information
+      expect(await screen.findByText("Delivered")).toBeInTheDocument();
+      expect(screen.getByText("Alice Johnson")).toBeInTheDocument();
+      expect(screen.getByText(/Success/i)).toBeInTheDocument();
+      expect(screen.getByText("2")).toBeInTheDocument(); // quantity of products
 
-    // Verify API call was not made
-    expect(axios.get).not.toHaveBeenCalled();
-  });
-
-  test("displays order information correctly", async () => {
-    // Create a custom render that doesn't use container
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    // Wait for API call to complete
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      // Check product information is displayed
+      expect(
+        await screen.findByText("Wireless Headphones")
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Price : 299.99/)).toBeInTheDocument();
+      expect(screen.getByText("Smartphone Case")).toBeInTheDocument();
+      expect(screen.getByText(/Price : 29.99/)).toBeInTheDocument();
     });
 
-    // Check if orders are being processed correctly by examining that orders state was updated
-    expect(mockOrders.length).toBe(2);
-    expect(mockOrders[0].status).toBe("Processing");
-    expect(mockOrders[1].status).toBe("Shipped");
+    it("should display 'Failed' status for unsuccessful payment transactions", async () => {
+      const failedPaymentOrder = [
+        {
+          _id: "order456",
+          status: "Cancelled",
+          buyer: { name: "Bob Wilson" },
+          createAt: "2023-09-28T09:15:00Z",
+          payment: { success: false },
+          products: [
+            {
+              _id: "product321",
+              name: "Gaming Keyboard",
+              description: "Mechanical gaming keyboard with RGB lighting",
+              price: 159.99,
+            },
+          ],
+        },
+      ];
 
-    // Check the layout is rendered correctly
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
-  });
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: failedPaymentOrder });
 
-  test("displays product information for each order", async () => {
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    // Wait for API call to complete
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      expect(await screen.findByText("Failed")).toBeInTheDocument();
+      expect(screen.getByText("Bob Wilson")).toBeInTheDocument();
+      expect(screen.getByText("Gaming Keyboard")).toBeInTheDocument();
+      expect(screen.getByText(/Price : 159.99/)).toBeInTheDocument();
     });
 
-    // Verify the mock orders contain the expected product data
-    expect(mockOrders[0].products.length).toBe(2);
-    expect(mockOrders[0].products[0].name).toBe("Test Product 1");
-    expect(mockOrders[0].products[1].name).toBe("Test Product 2");
+    it("should truncate long product descriptions to 30 characters", async () => {
+      const orderWithLongDescription = [
+        {
+          _id: "order789",
+          status: "Shipped",
+          buyer: { name: "Carol Davis" },
+          createAt: "2023-10-05T16:45:00Z",
+          payment: { success: true },
+          products: [
+            {
+              _id: "product654",
+              name: "Professional Camera",
+              description:
+                "This is an extremely detailed and comprehensive description of a professional camera with advanced features and capabilities that exceed thirty characters",
+              price: 1299.99,
+            },
+          ],
+        },
+      ];
 
-    expect(mockOrders[1].products.length).toBe(1);
-    expect(mockOrders[1].products[0].name).toBe("Test Product 3");
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: orderWithLongDescription });
+
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+
+      // Check that description is truncated
+      expect(
+        await screen.findByText("This is an extremely detailed")
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          "This is an extremely detailed and comprehensive description"
+        )
+      ).not.toBeInTheDocument();
+    });
   });
 
-  test("handles error when fetching orders", async () => {
-    // Mock console.log to check error logging
-    const originalConsoleLog = console.log;
-    console.log = jest.fn();
+  // Integration & Interaction Checks
+  describe("Integration & Interaction Checks", () => {
+    it("should properly integrate Layout and UserMenu components", () => {
+      useAuth.mockReturnValue([{ token: null }, jest.fn()]);
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    // Mock axios to reject with error
-    const mockError = new Error("Failed to fetch orders");
-    axios.get.mockRejectedValueOnce(mockError);
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    // Verify error was logged
-    await waitFor(() => {
-      expect(console.log).toHaveBeenCalledWith(mockError);
+      const layout = screen.getByTestId("layout");
+      expect(layout).toBeInTheDocument();
+      expect(layout.getAttribute("data-title")).toBe("Your Orders");
+      expect(screen.getByText("UserMenu")).toBeInTheDocument();
     });
 
-    // Restore console.log
-    console.log = originalConsoleLog;
+    it("should make correct API call with proper endpoint configuration", async () => {
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: mockOrdersData });
+
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+
+      await waitFor(() =>
+        expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders")
+      );
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    });
+
+    it("should display correct image sources for product photos", async () => {
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: mockOrdersData });
+
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("img")).toHaveLength(2);
+      });
+
+      const images = screen.getAllByRole("img");
+      expect(images[0]).toHaveAttribute(
+        "src",
+        "/api/v1/product/product-photo/product456"
+      );
+      expect(images[0]).toHaveAttribute("alt", "Wireless Headphones");
+      expect(images[1]).toHaveAttribute(
+        "src",
+        "/api/v1/product/product-photo/product789"
+      );
+      expect(images[1]).toHaveAttribute("alt", "Smartphone Case");
+    });
   });
 
-  // Additional tests to improve coverage
+  // Failure & Exception Handling
+  describe("Failure & Exception Handling", () => {
+    it("should gracefully handle API errors and log them appropriately", async () => {
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
 
-  test("handles missing order data properly", async () => {
-    // Mock order with missing properties to test conditional rendering
-    const incompleteOrders = [
-      {
-        _id: "order-incomplete",
-        // missing status
-        buyer: {}, // empty buyer
-        // missing createAt
-        payment: {}, // empty payment
-        products: [], // empty products
-      },
-    ];
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockRejectedValue(new Error("Server Unavailable"));
 
-    // Mock the API response with incomplete data
-    axios.get.mockResolvedValueOnce({ data: incompleteOrders });
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
+      await waitFor(() => expect(consoleSpy).toHaveBeenCalled());
+      expect(consoleSpy).toHaveBeenCalledWith(new Error("Server Unavailable"));
 
-    // Verify API was called
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      consoleSpy.mockRestore();
     });
 
-    // We expect the component to render even with missing data
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
+    it("should prevent API calls when authentication token is absent", async () => {
+      useAuth.mockReturnValue([{ token: null }, jest.fn()]);
+
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(axios.get).not.toHaveBeenCalled();
+    });
+
+    it("should handle empty orders array gracefully", async () => {
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: [] });
+
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(axios.get).toHaveBeenCalled();
+      });
+
+      expect(screen.getByText("All Orders")).toBeInTheDocument();
+      // Should not render any order tables or product information
+      expect(screen.queryByText("Delivered")).not.toBeInTheDocument();
+    });
+
+    it("should handle orders with missing or undefined properties", async () => {
+      const incompleteOrders = [
+        {
+          _id: "incomplete-order",
+          status: "Processing",
+          buyer: null,
+          createAt: "2023-10-10T12:00:00Z",
+          payment: { success: true },
+          products: [],
+        },
+      ];
+
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: incompleteOrders });
+
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Processing")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("0")).toBeInTheDocument(); // no products
+    });
   });
 
-  test("verifies product description is truncated", async () => {
-    // Create a special mock order with a very long description
-    const orderWithLongDesc = [
-      {
-        _id: "order-long-desc",
-        status: "Processing",
-        buyer: { name: "Test User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [
-          {
-            _id: "product-long-desc",
-            name: "Test Product Long Description",
-            description:
-              "This is a very long product description that needs to be truncated to 30 characters.",
-            price: 99.99,
-          },
-        ],
-      },
-    ];
+  // Edge Cases & Boundary Testing
+  describe("Edge Cases & Boundary Testing", () => {
+    it("should handle multiple orders with varying data structures", async () => {
+      const multipleOrders = [
+        {
+          _id: "multi-order-1",
+          status: "Pending",
+          buyer: { name: "David Chen" },
+          createAt: "2023-10-12T10:30:00Z",
+          payment: { success: true },
+          products: [
+            {
+              _id: "multi-prod-1",
+              name: "Laptop Stand",
+              description: "Adjustable laptop stand",
+              price: 79.99,
+            },
+          ],
+        },
+        {
+          _id: "multi-order-2",
+          status: "Completed",
+          buyer: { name: "Eva Martinez" },
+          createAt: "2023-10-11T15:20:00Z",
+          payment: { success: false },
+          products: [
+            {
+              _id: "multi-prod-2",
+              name: "USB Cable",
+              description:
+                "High-speed USB-C cable for data transfer and charging purposes",
+              price: 19.99,
+            },
+            {
+              _id: "multi-prod-3",
+              name: "Mouse Pad",
+              description: "Gaming mouse pad",
+              price: 24.99,
+            },
+          ],
+        },
+      ];
 
-    // Use this special mock for this test
-    axios.get.mockResolvedValueOnce({ data: orderWithLongDesc });
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: multipleOrders });
 
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    // Wait for API call to complete
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      // Check first order
+      expect(await screen.findByText("Pending")).toBeInTheDocument();
+      expect(screen.getByText("David Chen")).toBeInTheDocument();
+
+      // Check second order
+      expect(screen.getByText("Completed")).toBeInTheDocument();
+      expect(screen.getByText("Eva Martinez")).toBeInTheDocument();
+
+      // Check quantities using more specific selectors
+      const tables = screen.getAllByRole("table");
+      expect(tables).toHaveLength(2);
+
+      // Check both Success and Failed payment statuses are displayed
+      expect(screen.getByText("Success")).toBeInTheDocument();
+      expect(screen.getByText("Failed")).toBeInTheDocument();
     });
 
-    // Verify that the long description is properly truncated in the component logic
-    const longDescription = orderWithLongDesc[0].products[0].description;
-    expect(longDescription.length).toBeGreaterThan(30);
-    const truncatedDesc = longDescription.substring(0, 30);
-    expect(truncatedDesc.length).toBe(30);
-  });
+    it("should properly handle moment date formatting", async () => {
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: mockOrdersData });
 
-  test("handles conditional rendering of payment status", async () => {
-    // Mock orders with different payment statuses
-    const ordersWithDifferentPayments = [
-      {
-        _id: "order-success",
-        status: "Processing",
-        buyer: { name: "Success User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [],
-      },
-      {
-        _id: "order-failed",
-        status: "Cancelled",
-        buyer: { name: "Failed User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: false },
-        products: [],
-      },
-    ];
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    // Use this mock for this test
-    axios.get.mockResolvedValueOnce({ data: ordersWithDifferentPayments });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    // Wait for API call to complete
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      await waitFor(() => {
+        expect(screen.getByText("2 days ago")).toBeInTheDocument();
+      });
     });
 
-    // Verify the conditional logic for payment status is correct
-    expect(ordersWithDifferentPayments[0].payment.success).toBe(true);
-    expect(ordersWithDifferentPayments[1].payment.success).toBe(false);
-  });
+    it("should handle products with exactly 30 character descriptions", async () => {
+      const exactLengthOrder = [
+        {
+          _id: "exact-order",
+          status: "Delivered",
+          buyer: { name: "Frank Thompson" },
+          createAt: "2023-10-13T08:00:00Z",
+          payment: { success: true },
+          products: [
+            {
+              _id: "exact-prod",
+              name: "Tablet",
+              description: "This description is exactly 30", // exactly 30 characters
+              price: 399.99,
+            },
+          ],
+        },
+      ];
 
-  test("renders orders with all properties correctly", async () => {
-    // Create a specialized set of orders to test all rendering paths
-    const specialOrders = [
-      {
-        _id: "special-order1",
-        status: "Delivered",
-        buyer: { name: "Special Test User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [
-          {
-            _id: "special-product1",
-            name: "Special Test Product",
-            description: "Special test product description",
-            price: 99.99,
-          },
-        ],
-      },
-    ];
+      useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
+      axios.get.mockResolvedValue({ data: exactLengthOrder });
 
-    axios.get.mockResolvedValueOnce({ data: specialOrders });
+      render(
+        <BrowserRouter>
+          <Orders />
+        </BrowserRouter>
+      );
 
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    // Wait for API call to complete
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      expect(
+        await screen.findByText("This description is exactly 30")
+      ).toBeInTheDocument();
     });
-
-    // We need to manually check if specific properties are used in the component
-    // This is not the best way to test components, but it helps cover lines of code
-
-    // The order has _id property
-    expect(specialOrders[0]._id).toBe("special-order1");
-
-    // The order has status property
-    expect(specialOrders[0].status).toBe("Delivered");
-
-    // The order has buyer with name property
-    expect(specialOrders[0].buyer.name).toBe("Special Test User");
-
-    // The order has createAt property used for date formatting
-    expect(specialOrders[0].createAt).toBe("2023-09-22T10:00:00Z");
-
-    // The order has payment with success property
-    expect(specialOrders[0].payment.success).toBe(true);
-
-    // The order has products array with at least one product
-    expect(specialOrders[0].products.length).toBe(1);
-
-    // The product has properties used in rendering
-    expect(specialOrders[0].products[0]._id).toBe("special-product1");
-    expect(specialOrders[0].products[0].name).toBe("Special Test Product");
-    expect(specialOrders[0].products[0].description).toBe(
-      "Special test product description"
-    );
-    expect(specialOrders[0].products[0].price).toBe(99.99);
-  });
-
-  // New test to specifically check the rendered DOM elements
-  test("verifies rendered DOM elements for orders and products", async () => {
-    // Create a complete mock order with all necessary properties
-    const completeOrder = [
-      {
-        _id: "complete-order-id",
-        status: "Completed",
-        buyer: { name: "Complete Order User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [
-          {
-            _id: "complete-product-id",
-            name: "Complete Test Product",
-            description: "This complete product has a full description.",
-            price: 129.99,
-          },
-        ],
-      },
-    ];
-
-    axios.get.mockResolvedValueOnce({ data: completeOrder });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    // Wait for API call to complete and component to update
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
-    });
-
-    // Test the data model to test our rendering logic
-    expect(completeOrder[0].status).toBe("Completed");
-    expect(completeOrder[0].buyer.name).toBe("Complete Order User");
-    expect(completeOrder[0].payment.success).toBe(true);
-
-    // Verify product details
-    expect(completeOrder[0].products[0].name).toBe("Complete Test Product");
-    // The description is truncated to 30 characters in the component
-    const description = completeOrder[0].products[0].description;
-    expect(description.substring(0, 30)).toBe("This complete product has a fu");
-    expect(completeOrder[0].products[0].price).toBe(129.99);
-  });
-
-  // Test for orders with different payment statuses rendered in the DOM
-  test("renders different payment statuses in the DOM", async () => {
-    // Mock orders with different payment statuses
-    const ordersWithPayments = [
-      {
-        _id: "success-payment-order",
-        status: "Delivered",
-        buyer: { name: "Success Payment User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [
-          {
-            _id: "product1",
-            name: "Product 1",
-            description: "Description 1",
-            price: 10,
-          },
-        ],
-      },
-      {
-        _id: "failed-payment-order",
-        status: "Cancelled",
-        buyer: { name: "Failed Payment User" },
-        createAt: "2023-09-23T10:00:00Z",
-        payment: { success: false },
-        products: [
-          {
-            _id: "product2",
-            name: "Product 2",
-            description: "Description 2",
-            price: 20,
-          },
-        ],
-      },
-    ];
-
-    axios.get.mockResolvedValueOnce({ data: ordersWithPayments });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    // Wait for API call to complete
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
-    });
-
-    // Test the data model values
-    // Verify the conditional payment display logic
-    expect(ordersWithPayments[0].payment.success).toBe(true);
-    expect(ordersWithPayments[0].payment.success ? "Success" : "Failed").toBe(
-      "Success"
-    );
-
-    expect(ordersWithPayments[1].payment.success).toBe(false);
-    expect(ordersWithPayments[1].payment.success ? "Success" : "Failed").toBe(
-      "Failed"
-    );
-
-    // Verify other order data to ensure proper code coverage
-    expect(ordersWithPayments[0].status).toBe("Delivered");
-    expect(ordersWithPayments[1].status).toBe("Cancelled");
-    expect(ordersWithPayments[0].buyer.name).toBe("Success Payment User");
-    expect(ordersWithPayments[1].buyer.name).toBe("Failed Payment User");
-
-    // Verify product data
-    expect(ordersWithPayments[0].products[0].name).toBe("Product 1");
-    expect(ordersWithPayments[1].products[0].name).toBe("Product 2");
-    expect(ordersWithPayments[0].products[0].price).toBe(10);
-    expect(ordersWithPayments[1].products[0].price).toBe(20);
-  });
-
-  test("handles orders with null/undefined properties", async () => {
-    const ordersWithNullProps = [
-      {
-        _id: "order-with-nulls",
-        status: null,
-        buyer: null,
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: false },
-        products: null,
-      },
-      {
-        _id: "order-undefined-buyer",
-        status: "Processing",
-        // buyer is undefined
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [],
-      },
-    ];
-
-    axios.get.mockResolvedValueOnce({ data: ordersWithNullProps });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
-    });
-
-    // Verify component renders without crashing
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
-  });
-
-  test("handles orders with undefined products array", async () => {
-    const ordersWithUndefinedProducts = [
-      {
-        _id: "order-no-products",
-        status: "Shipped",
-        buyer: { name: "Test User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        // products is undefined - will test the products?.map() branch
-      },
-    ];
-
-    axios.get.mockResolvedValueOnce({ data: ordersWithUndefinedProducts });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
-    });
-
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
-  });
-
-  test("handles buyer with undefined name property", async () => {
-    const ordersWithEmptyBuyer = [
-      {
-        _id: "order-empty-buyer",
-        status: "Processing",
-        buyer: {}, // buyer exists but name is undefined
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [],
-      },
-    ];
-
-    axios.get.mockResolvedValueOnce({ data: ordersWithEmptyBuyer });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
-    });
-
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
-  });
-
-  test("handles completely null order object", async () => {
-    const ordersWithNull = [
-      null, // This will test if the component handles null orders
-      {
-        _id: "valid-order",
-        status: "Processing",
-        buyer: { name: "Valid User" },
-        createAt: "2023-09-22T10:00:00Z",
-        payment: { success: true },
-        products: [],
-      },
-    ];
-
-    axios.get.mockResolvedValueOnce({ data: ordersWithNull });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
-    });
-
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
-  });
-
-  test("handles empty orders array", async () => {
-    axios.get.mockResolvedValueOnce({ data: [] });
-
-    render(
-      <BrowserRouter>
-        <Orders />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalled();
-    });
-
-    expect(screen.getByText("All Orders")).toBeInTheDocument();
   });
 });
