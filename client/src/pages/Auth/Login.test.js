@@ -62,18 +62,10 @@ describe('Login Component', () => {
         // Clean up mocks before each test for isolation
         jest.clearAllMocks();
         
-        // Setup default successful API responses for components that make API calls during render
-        axios.post.mockResolvedValueOnce({
+        // Mock categories API for header component dependencies (persistent for each test)
+        axios.get.mockResolvedValue({
           data: {
             success: true,
-            user: { id: 1, name: "John Doe", email: "test@example.com" },
-            token: "mockToken",
-          },
-        });
-
-        // Mock categories API for header component dependencies
-        axios.get.mockResolvedValueOnce({
-          data: {
             categories: [
               { id: 1, name: "Category 1" },
               { id: 2, name: "Category 2" },
@@ -153,6 +145,20 @@ describe('Login Component', () => {
      * Bug Found: Successful login should call API and show success notification
      */
     it('processes successful login and shows success notification', async () => {
+        // Clear any previous mocks
+        jest.clearAllMocks();
+        
+        // Re-setup categories mock for Header component
+        axios.get.mockResolvedValue({
+            data: {
+                success: true,
+                categories: [
+                    { id: 1, name: "Category 1" },
+                    { id: 2, name: "Category 2" },
+                ],
+            },
+        });
+
         // Mock successful login API response
         axios.post.mockResolvedValueOnce({
             data: {
@@ -178,15 +184,23 @@ describe('Login Component', () => {
         fireEvent.click(getByText('LOGIN'));
 
         // Wait for API call to complete
-        await waitFor(() => expect(axios.post).toHaveBeenCalled());
+        await waitFor(() => {
+            expect(axios.post).toHaveBeenCalledWith('/api/v1/auth/login', {
+                email: 'test@example.com',
+                password: 'password123'
+            });
+        });
+        
         // Verify success notification is displayed with correct styling
-        expect(toast.success).toHaveBeenCalledWith("Login successful", {
-            duration: 5000,
-            icon: '🙏',
-            style: {
-                background: 'green',
-                color: 'white'
-            }
+        await waitFor(() => {
+            expect(toast.success).toHaveBeenCalledWith("Login successful", {
+                duration: 5000,
+                icon: '🙏',
+                style: {
+                    background: 'green',
+                    color: 'white'
+                }
+            });
         });
     });
 
@@ -196,6 +210,9 @@ describe('Login Component', () => {
      * Bug Found: Failed login should show appropriate error message to user
      */
     it('displays error notification on failed login', async () => {
+        // Clear all previous mock calls
+        jest.clearAllMocks();
+        
         // Mock rejected API call that simulates authentication failure
         const errorResponse = new Error('Request failed');
         errorResponse.response = {
@@ -219,17 +236,18 @@ describe('Login Component', () => {
         fireEvent.change(getByPlaceholderText('Enter Your Password'), { target: { value: 'wrongpassword' } });
         fireEvent.click(getByText('LOGIN'));
 
-        // Wait for API call to fail
-        await waitFor(() => expect(axios.post).toHaveBeenCalled(), { timeout: 10000 });
-        
-        // Verify error notification is displayed to user
+        // Wait for API call to complete and error handling
         await waitFor(() => {
-            expect(toast.error).toHaveBeenCalled();
-        }, { timeout: 10000 });
+            expect(axios.post).toHaveBeenCalledWith('/api/v1/auth/login', {
+                email: 'test@example.com',
+                password: 'wrongpassword'
+            });
+        });
         
-        // Debug: Log the actual error calls for troubleshooting
-        const calls = toast.error.mock.calls;
-        console.log('toast.error calls:', calls);
+        // Verify error notification is displayed with proper message
+        await waitFor(() => {
+            expect(toast.error).toHaveBeenCalledWith("Error in login");
+        });
     });
 
     /**
