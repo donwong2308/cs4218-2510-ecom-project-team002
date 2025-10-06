@@ -38,7 +38,11 @@ const ProductDetails = () => {
     }
   };
   return (
-    <Layout>
+    <Layout>{ !params.slug ? (
+      <div className="container" data-testid="no-slug">
+      </div>
+     ) : (
+      <>
       <div className="row container product-details">
         <div className="col-md-6">
           <img
@@ -118,6 +122,8 @@ const ProductDetails = () => {
           ))}
         </div>
       </div>
+      </>
+    )}
     </Layout>
   );
 };
