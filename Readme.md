@@ -146,7 +146,7 @@ To begin unit testing with Jest in your project, follow these steps:
      ```
 
 ## 6. GitHub Workflow: 
-**Link:** https://github.com/cs4218/cs4218-2510-ecom-project-team002/blob/main/.github/workflows/main.yml
+**CI Link:** https://github.com/cs4218/cs4218-2510-ecom-project-team002/actions/runs/18268024940/job/52005362576
 
 ## 7. Scope of Members:
 - Donavon: 
@@ -187,6 +187,25 @@ To begin unit testing with Jest in your project, follow these steps:
 - David
 
 - Zoe
+   - Features: Product retrieval, Cart
+   - Client related Files:
+      - context/cart.js
+      - pages/CartPage.js
+      - pages/ProductDetails.js
+      - pages/CategoryProduct.js
+   - Server Related Files: 
+      - controllers/productController.js
+          1. getProductController
+          2. getSingleProductController
+          3. productPhotoController
+          4. productFiltersController
+          5. productCountController
+          6. productListController
+          7. searchProductController
+          8. realtedProductController
+          9. productCategoryController
+          - models/productModel.js
+      - models/productModel.js
 
 - Zoebelle
    -Features: Category Listing & Single-Category View, Site Layout, Spinner UX, Static Pages, Global Search
@@ -216,5 +235,6 @@ To begin unit testing with Jest in your project, follow these steps:
 - Donavon: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - Hao Wen: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - David
-- Zoe
+- Zoe: AI tools were used to generate unit test cases, mostly mocks
 - Zoebelle: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
+
