@@ -1,3 +1,29 @@
+/**
+ * Contact Page Unit Tests
+ * 
+ * Test File: Contact.test.js
+ * Component Under Test: Contact.js
+ * 
+ * Testing Strategy:
+ * - Output-based testing: Verifies that specific UI elements are rendered correctly
+ * - State-based testing: Ensures proper component structure and content display
+ * 
+ * Testing Techniques Used:
+ * - Mocks: External dependencies (axios, context hooks, icons) to isolate component
+ * - Stubs: Simple return values for mocked functions to control test environment
+ * - Fakes: MemoryRouter provides fake routing context for testing
+ * 
+ * Test Coverage:
+ * - UI element rendering verification
+ * - Static content validation
+ * - Component integration with Layout system
+ * 
+ * Bug Analysis:
+ * ✅ No bugs found in Contact.js - component renders static content correctly
+ * ✅ All contact information displays as expected
+ * ✅ Layout integration works properly
+ */
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -37,13 +63,31 @@ jest.mock('react-icons/bi', () => ({
   BiSupport: () => '<BiSupport />'
 }));
 
-// Unit tests for the Contact page
-// These tests render the Contact page in isolation and assert that
-// the key UI elements are present. We wrap the component with
-// MemoryRouter because the real `Contact` component uses the app's
-// `Layout` which may include links or routing-aware elements.
+/**
+ * Unit Tests for Contact Page Component
+ * 
+ * These tests verify the Contact page renders correctly in isolation.
+ * The Contact component uses the application's Layout component which includes
+ * navigation and routing elements, so we wrap tests with MemoryRouter.
+ * 
+ * Mocking Strategy:
+ * - axios: Prevents actual API calls during testing
+ * - Context hooks: Provides controlled state for layout components
+ * - react-icons: Avoids icon rendering issues in test environment
+ */
 describe('Contact Page', () => {
-  // Verify the page heading and the hero image are rendered
+  /**
+   * Test: Contact Page Header and Hero Image Rendering
+   * 
+   * Test Type: Output-based testing (UI element verification)
+   * Purpose: Ensures the main heading and hero image are displayed correctly
+   * 
+   * What it tests:
+   * - Page title "CONTACT US" is rendered and accessible
+   * - Contact hero image is present with proper alt text
+   * 
+   * Bug Status: ✅ No bugs found - static content renders correctly
+   */
   test('renders contact heading and image', () => {
     // Render the component inside a MemoryRouter so any router
     // children inside Layout don't throw during test rendering.
@@ -63,8 +107,20 @@ describe('Contact Page', () => {
     expect(screen.getByAltText('contactus')).toBeInTheDocument();
   });
 
-  // Verify that the contact details shown on the page match the
-  // values hard-coded in the component (email, phone and support number).
+  /**
+   * Test: Contact Information Display Verification
+   * 
+   * Test Type: Output-based testing (content verification)
+   * Purpose: Validates that all contact information is displayed correctly
+   * 
+   * Contact Details Tested:
+   * - Email: www.help@ecommerceapp.com
+   * - Phone: 012-3456789  
+   * - Support: 1800-0000-0000 (toll free)
+   * 
+   * Testing Technique: Uses regex matching for resilience against whitespace
+   * Bug Status: ✅ No bugs found - all contact information displays correctly
+   */
   test('displays contact details (email, phone, support)', () => {
     render(
       <MemoryRouter>
