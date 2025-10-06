@@ -145,96 +145,117 @@ To begin unit testing with Jest in your project, follow these steps:
      npm run test
      ```
 
-## 6. GitHub Workflow: 
+## 6. GitHub Workflow:
+
 **CI Link:** https://github.com/cs4218/cs4218-2510-ecom-project-team002/actions/runs/18268024940/job/52005362576
 
 ## 7. Scope of Members:
-- Donavon: 
-   - Features: Contact, Login, Payment, Policy, Registration, and Protected Routes
-   - Client related Files: pages/Contact.js, pages/Auth/Login.js, pages/Policy.js, context/auth.js, pages/Auth/Register.js
-   - Server Related Files: 
-      - controllers/productController.js
-         1. braintreeTokenController
-         2. brainTreePaymentController
-      - helpers/authHelper.js
-      - middlewares/authMiddleware.js
-      - controllers/authController.js
-         1. registerController
-         2. loginController
-         3. forgotPasswordController
-         4. testController
+
+- Donavon:
+
+  - Features: Contact, Login, Payment, Policy, Registration, and Protected Routes
+  - Client related Files: pages/Contact.js, pages/Auth/Login.js, pages/Policy.js, context/auth.js, pages/Auth/Register.js
+  - Server Related Files:
+    - controllers/productController.js
+      1.  braintreeTokenController
+      2.  brainTreePaymentController
+    - helpers/authHelper.js
+    - middlewares/authMiddleware.js
+    - controllers/authController.js
+      1.  registerController
+      2.  loginController
+      3.  forgotPasswordController
+      4.  testController
 
 - Hao Wen
-   - Features: Admin Actions, Admin Dashboard, Admin View Products, Profile
-   - Client related Files:
-      - components/Form/CategoryForm.js
-      - pages/admin/CreateCategory.js
-      - pages/admin/CreateProduct.js
-      - pages/admin/UpdateProduct.js
-      - components/AdminMenu.js
-      - pages/admin/AdminDashboard.js
-      - pages/admin/Products.js
-      - pages/user/Profile.js
-    - Server Related Files: 
-      - controllers/categoryController.js
-          1. createCategoryController
-          2. updateCategoryController
-          3. deleteCategoryController
-      - controllers/productController.js
-          1. createProductController
-          2. deleteProductController
-          3. updateProductController
+  - Features: Admin Actions, Admin Dashboard, Admin View Products, Profile
+  - Client related Files:
+    - components/Form/CategoryForm.js
+    - pages/admin/CreateCategory.js
+    - pages/admin/CreateProduct.js
+    - pages/admin/UpdateProduct.js
+    - components/AdminMenu.js
+    - pages/admin/AdminDashboard.js
+    - pages/admin/Products.js
+    - pages/user/Profile.js
+  - Server Related Files:
+    - controllers/categoryController.js
+      1. createCategoryController
+      2. updateCategoryController
+      3. deleteCategoryController
+    - controllers/productController.js
+      1. createProductController
+      2. deleteProductController
+      3. updateProductController
 - David
+
+  - Features: Admin View Orders, Admin View Users, General, Home, Order
+  - Client related Files:
+    - pages/admin/AdminOrders.js
+    - pages/admin/Users.js
+    - components/Routes/Private.js
+    - components/UserMenu.js
+    - pages/user/Dashboard.js
+    - pages/Homepage.js
+    - pages/user/Orders.js
+  - Server Related Files:
+    - models/userModel.js
+    - controllers/authController.js
+      1.  updateProfileController
+      2.  getOrdersController
+      3.  getAllOrdersController
+      4.  orderStatusController
+    - models/orderModel.js
 
 - Zoe
-   - Features: Product retrieval, Cart
-   - Client related Files:
-      - context/cart.js
-      - pages/CartPage.js
-      - pages/ProductDetails.js
-      - pages/CategoryProduct.js
-   - Server Related Files: 
-      - controllers/productController.js
-          1. getProductController
-          2. getSingleProductController
-          3. productPhotoController
-          4. productFiltersController
-          5. productCountController
-          6. productListController
-          7. searchProductController
-          8. realtedProductController
-          9. productCategoryController
-          - models/productModel.js
+
+  - Features: Product retrieval, Cart
+  - Client related Files:
+    - context/cart.js
+    - pages/CartPage.js
+    - pages/ProductDetails.js
+    - pages/CategoryProduct.js
+  - Server Related Files:
+    - controllers/productController.js
+      1. getProductController
+      2. getSingleProductController
+      3. productPhotoController
+      4. productFiltersController
+      5. productCountController
+      6. productListController
+      7. searchProductController
+      8. realtedProductController
+      9. productCategoryController
       - models/productModel.js
+    - models/productModel.js
 
 - Zoebelle
-   -Features: Category Listing & Single-Category View, Site Layout, Spinner UX, Static Pages, Global Search
+  -Features: Category Listing & Single-Category View, Site Layout, Spinner UX, Static Pages, Global Search
 
-   -Client Related Files:
-      -hooks/useCategory.js
-      -pages/Categories.js
-      -components/Header.js, 
-      -components/Footer.js
-      -components/Layout.js
-      -components/Spinner.js
-      -pages/About.js
-      -pages/Pagenotfound.js
-      -components/Form/SearchInput.js
-      -context/search.js
-      -pages/Search.js
+  -Client Related Files:
+  -hooks/useCategory.js
+  -pages/Categories.js
+  -components/Header.js,
+  -components/Footer.js
+  -components/Layout.js
+  -components/Spinner.js
+  -pages/About.js
+  -pages/Pagenotfound.js
+  -components/Form/SearchInput.js
+  -context/search.js
+  -pages/Search.js
 
-   -Server Related Files:
-      -controllers/categoryController.js
-         1.categoryControlller
-         2.singleCategoryController
-      -models/categoryModel.js
-      -config/db.js`
-
+  -Server Related Files:
+  -controllers/categoryController.js
+  1.categoryControlller
+  2.singleCategoryController
+  -models/categoryModel.js
+  -config/db.js`
 
 ### AI Usage Declaration:
+
 - Donavon: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - Hao Wen: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
-- David
+- David: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - Zoe: AI tools were used to generate unit test cases, mostly mocks
 - Zoebelle: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
-
