@@ -54,9 +54,7 @@ describe("Orders Component", () => {
     jest.clearAllMocks();
   });
 
-  //
-  // 🔹 Initial Conditions & State Transitions
-  //
+  // Initial Conditions & State Transitions
   describe("Initial Conditions & State Transitions", () => {
     it("should render with initial empty state when no token provided", () => {
       useAuth.mockReturnValue([{ token: null }, jest.fn()]);
@@ -98,9 +96,7 @@ describe("Orders Component", () => {
     });
   });
 
-  //
-  // 🔹 Rendered Output & Data Presentation
-  //
+  // Rendered Output & Data Presentation
   describe("Rendered Output & Data Presentation", () => {
     it("should display complete order information when orders are successfully loaded", async () => {
       useAuth.mockReturnValue([{ token: "auth-token-12345" }, jest.fn()]);
@@ -202,9 +198,7 @@ describe("Orders Component", () => {
     });
   });
 
-  //
-  // 🔹 Integration & Interaction Checks
-  //
+  // Integration & Interaction Checks
   describe("Integration & Interaction Checks", () => {
     it("should properly integrate Layout and UserMenu components", () => {
       useAuth.mockReturnValue([{ token: null }, jest.fn()]);
@@ -264,9 +258,7 @@ describe("Orders Component", () => {
     });
   });
 
-  //
-  // 🔹 Failure & Exception Handling
-  //
+  // Failure & Exception Handling
   describe("Failure & Exception Handling", () => {
     it("should gracefully handle API errors and log them appropriately", async () => {
       const consoleSpy = jest
@@ -349,9 +341,7 @@ describe("Orders Component", () => {
     });
   });
 
-  //
-  // 🔹 Edge Cases & Boundary Testing
-  //
+  // Edge Cases & Boundary Testing
   describe("Edge Cases & Boundary Testing", () => {
     it("should handle multiple orders with varying data structures", async () => {
       const multipleOrders = [
