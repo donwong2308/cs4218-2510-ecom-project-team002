@@ -165,7 +165,25 @@ To begin unit testing with Jest in your project, follow these steps:
          4. testController
 
 - Hao Wen
-
+   - Features: Admin Actions, Admin Dashboard, Admin View Products, Profile
+   - Client related Files:
+      - components/Form/CategoryForm.js
+      - pages/admin/CreateCategory.js
+      - pages/admin/CreateProduct.js
+      - pages/admin/UpdateProduct.js
+      - components/AdminMenu.js
+      - pages/admin/AdminDashboard.js
+      - pages/admin/Products.js
+      - pages/user/Profile.js
+    - Server Related Files: 
+      - controllers/categoryController.js
+          1. createCategoryController
+          2. updateCategoryController
+          3. deleteCategoryController
+      - controllers/productController.js
+          1. createProductController
+          2. deleteProductController
+          3. updateProductController
 - David
 
 - Zoe
@@ -190,10 +208,33 @@ To begin unit testing with Jest in your project, follow these steps:
       - models/productModel.js
 
 - Zoebelle
+   -Features: Category Listing & Single-Category View, Site Layout, Spinner UX, Static Pages, Global Search
+
+   -Client Related Files:
+      -hooks/useCategory.js
+      -pages/Categories.js
+      -components/Header.js, 
+      -components/Footer.js
+      -components/Layout.js
+      -components/Spinner.js
+      -pages/About.js
+      -pages/Pagenotfound.js
+      -components/Form/SearchInput.js
+      -context/search.js
+      -pages/Search.js
+
+   -Server Related Files:
+      -controllers/categoryController.js
+         1.categoryControlller
+         2.singleCategoryController
+      -models/categoryModel.js
+      -config/db.js`
+
 
 ### AI Usage Declaration:
 - Donavon: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
-- Hao Wen
+- Hao Wen: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
 - David
 - Zoe: AI tools were used to generate unit test cases, mostly mocks
-- Zoebelle
+- Zoebelle: AI tools were used to generate unit test cases, refine comments for the unit tests and documentation.
+
