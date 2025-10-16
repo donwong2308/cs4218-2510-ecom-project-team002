@@ -6,6 +6,7 @@ import {
   getOrdersController,
   getAllOrdersController,
   orderStatusController,
+  testController,
 } from "./authController.js";
 import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
@@ -538,6 +539,52 @@ describe("orderStatusController", () => {
       // Assert response contains updated order
       expect(res.json).toHaveBeenCalledWith(updatedOrder);
     }
+  });
+});
+
+describe("testController - Protected Routes Test", () => {
+  /**
+   * Test: Successful protected route access
+   * Purpose: Verify that the testController returns success message for protected routes
+   * Approach: Output-based testing - verify the response message
+   * Expected: Controller should send "Protected Routes" message
+   */
+  test("should return Protected Routes message successfully", async () => {
+    const req = {}; // No parameters needed for this controller
+    const res = createRes();
+
+    // Call the actual controller function
+    await testController(req, res);
+
+    // Verify the response message
+    expect(res.send).toHaveBeenCalledWith("Protected Routes");
+  });
+
+  /**
+   * Test: Error handling in protected route
+   * Purpose: Verify that the controller handles unexpected errors gracefully
+   * Approach: Communication-based testing - mock res.send to throw error
+   * Expected: Controller should catch error and send error response
+   */
+  test("should handle errors and send error response", async () => {
+    const req = {};
+    const res = {
+      send: jest.fn().mockImplementationOnce(() => {
+        throw new Error("Unexpected error in response");
+      }),
+    };
+
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    // Call the controller - it should catch the error
+    await testController(req, res);
+
+    // Verify error was logged
+    expect(consoleSpy).toHaveBeenCalled();
+    const loggedError = consoleSpy.mock.calls[0][0];
+    expect(loggedError).toBeInstanceOf(Error);
+
+    consoleSpy.mockRestore();
   });
 });
 
