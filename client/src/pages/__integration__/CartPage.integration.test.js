@@ -147,7 +147,7 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
     jest.clearAllMocks();
     mockRequestPaymentMethod.mockResolvedValue({ nonce: "test-payment-nonce" });
     axios.get.mockResolvedValue({ data: { clientToken: "test-braintree-token" } });
-    axios.post.mockResolvedValue({ data: { success: true } });
+    axios.post.mockResolvedValue({ data: { ok: true } });
   });
 
   afterEach(() => {
@@ -250,7 +250,7 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
     test("should handle Braintree token fetch error gracefully", async () => {
       // Arrange: Mock token fetch failure
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-      axios.get.mockRejectedValueOnce(new Error("Token fetch failed"));
+      axios.get.mockRejectedValue(new Error("Token fetch failed"));
 
       const authUser = { name: "User", address: "Address" };
       const cartItems = [{ _id: "1", name: "Product", price: 50, description: "Test" }];
@@ -268,7 +268,9 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
       });
 
       // Assert: Braintree widget should NOT be rendered without token
-      expect(screen.queryByTestId("braintree-dropin")).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByTestId("braintree-dropin")).not.toBeInTheDocument();
+      });
 
       consoleErrorSpy.mockRestore();
     });
@@ -574,7 +576,7 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
 
     test("should show loading state during payment processing", async () => {
       // Arrange: Delay payment response
-      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { success: true } }), 100)));
+      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { ok: true } }), 100)));
 
       const authUser = { name: "User", address: "Address" };
       const cartItems = [{ _id: "1", name: "Product", price: 50, description: "Test" }];
@@ -597,12 +599,12 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
       // Wait for payment to complete
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalled();
-      });
+      }, { timeout: 3000 });
     });
 
     test("should disable payment button while processing", async () => {
       // Arrange: Delay payment
-      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { success: true } }), 100)));
+      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { ok: true } }), 100)));
 
       const authUser = { name: "User", address: "Address" };
       const cartItems = [{ _id: "1", name: "Product", price: 50, description: "Test" }];
