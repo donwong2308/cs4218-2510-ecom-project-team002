@@ -661,29 +661,53 @@ describe('Login Component Integration Tests - Phase 3: Business Logic Layer', ()
      * Integration Points:
      * - Forgot Password button → useNavigate
      * - Navigation → /forgot-password route
+     * 
+     * FIXED: This was a FALSE NEGATIVE. It only verified the button exists
+     * but NEVER verified where it navigates to. Now it properly tests navigation.
      */
-    test('should navigate to forgot password page', () => {
+    test('should navigate to forgot password page', async () => {
       // ─────────────────────────────────────────────────────────────────────
-      // ARRANGE
+      // ARRANGE: Import actual App component to use real routes
       // ─────────────────────────────────────────────────────────────────────
       
-      renderLoginWithRouter();
+      const App = require('../../../App').default;
+      
+      const { getByText, getByRole } = render(
+        <MemoryRouter initialEntries={['/login']}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      );
 
       // ─────────────────────────────────────────────────────────────────────
       // ACT: Click Forgot Password button
       // ─────────────────────────────────────────────────────────────────────
       
-      const forgotPasswordButton = screen.getByRole('button', { name: /forgot password/i });
-      
-      // ─────────────────────────────────────────────────────────────────────
-      // ASSERT: Button exists and is clickable
-      // ─────────────────────────────────────────────────────────────────────
+      const forgotPasswordButton = getByRole('button', { name: /forgot password/i });
       
       expect(forgotPasswordButton).toBeInTheDocument();
       expect(forgotPasswordButton).toHaveClass('forgot-btn');
       
-      // Click would navigate to /forgot-password (navigation integration verified)
       fireEvent.click(forgotPasswordButton);
+      
+      // ─────────────────────────────────────────────────────────────────────
+      // ASSERT: Verify navigation to /forgot-password route
+      // ─────────────────────────────────────────────────────────────────────
+      
+      // Wait for navigation and verify the FORGOT PASSWORD ROUTE EXISTS
+      await waitFor(() => {
+        // This test expects the /forgot-password route to exist and render
+        // the Forgot Password page. If it navigates to 404, the test SHOULD FAIL.
+        
+        // Look for forgot password page content (title, form, etc.)
+        const forgotPasswordContent = getByText(/reset.*password|forgot.*password.*form|enter.*email.*reset/i);
+        expect(forgotPasswordContent).toBeInTheDocument();
+      });
+      
+      // Additional verification: should NOT see 404 page
+      expect(() => getByText(/^404$/)).toThrow();
+      expect(() => getByText(/page not found|oops/i)).toThrow();
     });
 
     /**
