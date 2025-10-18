@@ -363,7 +363,15 @@ export const brainTreePaymentController = async (req, res) => {
         },
       },
       function (error, result) {
-        if (result) {
+        if (error) {
+          // Network or system error
+          console.error('Braintree transaction error:', error);
+          return res.status(500).send(error);
+        }
+        
+        // Check if transaction was successful
+        if (result && result.success) {
+          // Payment succeeded - create order
           const order = new orderModel({
             products: cart,
             payment: result,
@@ -371,11 +379,19 @@ export const brainTreePaymentController = async (req, res) => {
           }).save();
           res.json({ ok: true });
         } else {
-          res.status(500).send(error);
+          // Payment declined or failed
+          console.log('Payment declined:', result?.message || 'Transaction failed');
+          const errorMessage = result?.message || 'Payment declined. Please check your card details.';
+          res.status(400).json({ 
+            ok: false, 
+            error: errorMessage,
+            declined: true 
+          });
         }
       }
     );
   } catch (error) {
     console.log(error);
+    res.status(500).json({ ok: false, error: 'Payment processing failed' });
   }
 };
