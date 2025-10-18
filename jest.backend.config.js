@@ -11,8 +11,12 @@ export default {
     "<rootDir>/middlewares/*.test.js", 
     "<rootDir>/helpers/*.test.js",
     "<rootDir>/models/*.test.js",
-    "<rootDir>/config/*.test.js"
-
+    "<rootDir>/config/*.test.js",
+    "<rootDir>/controllers/__integration__/*.test.js",
+    "<rootDir>/middlewares/__integration__/*.test.js",
+    "<rootDir>/helpers/__integration__/*.test.js",
+    "<rootDir>/models/__integration__/*.test.js",
+    "<rootDir>/config/__integration__/*.test.js"
   ],
 
   // jest code coverage

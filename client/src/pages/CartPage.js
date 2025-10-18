@@ -68,13 +68,29 @@ const CartPage = () => {
         cart,
       });
       setLoading(false);
-      localStorage.removeItem("cart");
-      setCart([]);
-      navigate("/dashboard/user/orders");
-      toast.success("Payment Completed Successfully ");
+      
+      // Check if payment was successful
+      if (data?.ok) {
+        localStorage.removeItem("cart");
+        setCart([]);
+        navigate("/dashboard/user/orders");
+        toast.success("Payment Completed Successfully ");
+      } else {
+        // Payment declined or failed
+        toast.error(data?.error || "Payment failed. Please try again.");
+      }
     } catch (error) {
       console.error(error);
       setLoading(false);
+      
+      // Handle error response from backend
+      if (error.response?.data?.declined) {
+        toast.error(error.response.data.error || "Payment declined. Please check your card details.");
+      } else if (error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error("Payment processing failed. Please try again.");
+      }
     }
   };
   return (
