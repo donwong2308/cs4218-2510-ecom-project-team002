@@ -177,10 +177,14 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
       expect(braintreeWidget).toBeInTheDocument();
       expect(screen.getByTestId("braintree-auth")).toHaveTextContent("test-braintree-token");
 
+      // Wait for payment button to be enabled (instance is set)
+      await waitFor(() => {
+        const paymentButton = screen.getByRole("button", { name: /make payment/i });
+        expect(paymentButton).toBeEnabled();
+      });
+
       // Act: Click payment button
       const paymentButton = screen.getByRole("button", { name: /make payment/i });
-      expect(paymentButton).toBeEnabled();
-      
       fireEvent.click(paymentButton);
 
       // Assert: Payment processing flow
@@ -310,7 +314,13 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
       });
 
       // Act: Make payment
-      fireEvent.click(screen.getByRole("button", { name: /make payment/i }));
+      const payButton = screen.getByRole("button", { name: /make payment/i });
+      fireEvent.click(payButton);
+
+      // Wait for requestPaymentMethod to be called first
+      await waitFor(() => {
+        expect(mockRequestPaymentMethod).toHaveBeenCalled();
+      });
 
       // Assert: Backend should receive the nonce from Braintree
       await waitFor(() => {
@@ -320,7 +330,7 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
             nonce: "custom-nonce-123",
           })
         );
-      });
+      }, { timeout: 3000 });
     });
   });
 
@@ -532,10 +542,15 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
       // Act: Attempt payment
       fireEvent.click(screen.getByRole("button", { name: /make payment/i }));
 
+      // Assert: Wait for requestPaymentMethod to complete
+      await waitFor(() => {
+        expect(mockRequestPaymentMethod).toHaveBeenCalled();
+      });
+
       // Assert: Error should be logged
       await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalled();
-      });
+      }, { timeout: 3000 });
 
       // Assert: Cart should NOT be cleared on error
       expect(window.localStorage.removeItem).not.toHaveBeenCalledWith("cart");
@@ -575,8 +590,8 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
     });
 
     test("should show loading state during payment processing", async () => {
-      // Arrange: Delay payment response
-      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { ok: true } }), 100)));
+      // Arrange: Delay payment response to catch loading state
+      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { ok: true } }), 300)));
 
       const authUser = { name: "User", address: "Address" };
       const cartItems = [{ _id: "1", name: "Product", price: 50, description: "Test" }];
@@ -587,13 +602,19 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
         expect(screen.getByTestId("braintree-dropin")).toBeInTheDocument();
       });
 
+      // Wait for button to be enabled
+      await waitFor(() => {
+        const payButton = screen.getByRole("button", { name: /make payment/i });
+        expect(payButton).toBeEnabled();
+      });
+
       // Act: Click payment button
       const payButton = screen.getByRole("button", { name: /make payment/i });
       fireEvent.click(payButton);
 
       // Assert: Loading state should be shown
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /processing/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /processing \.\.\.\./i })).toBeInTheDocument();
       });
 
       // Wait for payment to complete
@@ -603,8 +624,13 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
     });
 
     test("should disable payment button while processing", async () => {
-      // Arrange: Delay payment
-      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { ok: true } }), 100)));
+      // Arrange: Delay payment significantly to catch loading state
+      axios.post.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ data: { ok: true } }), 500)));
+      
+      // Also delay requestPaymentMethod slightly to simulate real Braintree
+      mockRequestPaymentMethod.mockImplementation(() => 
+        new Promise(resolve => setTimeout(() => resolve({ nonce: "test-payment-nonce" }), 50))
+      );
 
       const authUser = { name: "User", address: "Address" };
       const cartItems = [{ _id: "1", name: "Product", price: 50, description: "Test" }];
@@ -619,11 +645,17 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
       const payButton = screen.getByRole("button", { name: /make payment/i });
       fireEvent.click(payButton);
 
-      // Assert: Button should be disabled during processing
+      // Assert: Button should change to "Processing ...." and be disabled
       await waitFor(() => {
-        const processingButton = screen.getByRole("button", { name: /processing/i });
+        const processingButton = screen.getByRole("button", { name: /processing \.\.\.\./i });
+        expect(processingButton).toBeInTheDocument();
         expect(processingButton).toBeDisabled();
-      });
+      }, { timeout: 3000 });
+      
+      // Wait for completion to avoid act warnings
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalled();
+      }, { timeout: 3000 });
     });
   });
 
