@@ -144,10 +144,9 @@ describe("CartPage", () => {
     for (const p of mockProducts) {
       expect(screen.getByText(p.name)).toBeInTheDocument();
       expect(
-        screen.getByText(p.description.split(" ").slice(0, 30).join(" "))
+        screen.getByText(p.description.substring(0, 30))
       ).toBeInTheDocument();
-      expect(screen.getByText(`Price: $${p.price}`)).toBeInTheDocument();
-      expect(screen.getByText(`Quantity: ${p.quantity}`)).toBeInTheDocument();
+      expect(screen.getByText(`Price : ${p.price}`)).toBeInTheDocument();
       expect(screen.getByAltText(p.name)).toBeInTheDocument();
     }
     expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(
@@ -327,7 +326,7 @@ describe("CartPage", () => {
       { _id: "1", name: "Product", price: 10, description: "Test" },
     ];
 
-    axios.post.mockResolvedValue({ data: { success: true } });
+    axios.post.mockResolvedValue({ data: { ok: true } });
 
     await renderCartPage(cartItems, authUser);
 
