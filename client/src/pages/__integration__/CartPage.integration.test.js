@@ -16,15 +16,15 @@
  * Real components: CartPage, Layout, useAuth, useCart
  */
 
-import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import React, { useEffect } from "react";
+import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { MemoryRouter } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import CartPage from "../CartPage";
 import { AuthProvider } from "../../context/auth";
-import { CartProvider } from "../../context/cart";
+import { CartProvider, useCart } from "../../context/cart";
 
 // Mock axios with proper structure for AuthProvider
 jest.mock("axios");
@@ -806,3 +806,191 @@ describe("CartPage Component Integration Tests - Phase 3: Business Logic Layer",
     });
   });
 });
+
+const seedLocalStorage = (cartValue) => {
+  const getItem = jest.fn((key) => {
+    if (key !== "cart") return null;
+    return cartValue == null ? null : JSON.stringify(cartValue);
+  });
+  const setItem = jest.fn();
+  const removeItem = jest.fn();
+  const clear = jest.fn();
+
+  Object.defineProperty(window, "localStorage", {
+    value: { getItem, setItem, removeItem, clear },
+    writable: true,
+  });
+
+  return { getItem, setItem, removeItem, clear };
+};
+
+// A tiny consumer to observe provider behavior & re-renders
+function Probe() {
+  const [cart, setCart] = useCart();
+
+  // Count renders to ensure consumer re-renders on updates
+  const rendersRef = React.useRef(0);
+  rendersRef.current += 1;
+
+  useEffect(() => {
+    // expose counts for assertions
+    window.__probe__ = { renders: rendersRef.current, cart };
+  }, [cart]);
+
+  return (
+    <div>
+      <div data-testid="cart-length">{cart.length}</div>
+      <button
+        data-testid="push-item"
+        onClick={() => setCart((prev) => [...prev, { _id: "x" }])}
+      >
+        push
+      </button>
+      <button data-testid="replace" onClick={() => setCart([{ _id: "y" }])}>
+        replace
+      </button>
+    </div>
+  );
+}
+
+function renderWithProvider() {
+  return render(
+    <CartProvider>
+      <Probe />
+    </CartProvider>
+  );
+}
+
+beforeEach(() => {
+  jest.restoreAllMocks();
+  // Default: empty storage unless overridden per test
+  seedLocalStorage(null);
+});
+
+describe("CartContext integration (JS)", () => {
+  test("initializes from localStorage (seeded cart)", async () => {
+    const seed = [{ _id: "1", name: "A", price: 10 }];
+    const spies = seedLocalStorage(seed);
+
+    renderWithProvider();
+
+    expect(spies.getItem).toHaveBeenCalledWith("cart");
+    expect(screen.getByTestId("cart-length")).toHaveTextContent("1");
+    expect(window.__probe__.cart).toEqual(seed);
+  });
+
+  test("exposes [cart, setCart] and updates state", async () => {
+    seedLocalStorage([]);
+    renderWithProvider();
+
+    expect(screen.getByTestId("cart-length")).toHaveTextContent("0");
+
+    await act(async () => {
+      screen.getByTestId("replace").click();
+    });
+
+    expect(screen.getByTestId("cart-length")).toHaveTextContent("1");
+    expect(window.__probe__.cart).toEqual([{ _id: "y" }]);
+  });
+
+  test("persists to localStorage when setCart uses direct value", async () => {
+    const spies = seedLocalStorage([]);
+    renderWithProvider();
+
+    await act(async () => {
+      screen.getByTestId("replace").click(); // sets [{ _id: "y" }]
+    });
+
+    expect(spies.setItem).toHaveBeenCalledWith(
+      "cart",
+      JSON.stringify([{ _id: "y" }])
+    );
+  });
+
+  test("persists to localStorage when setCart uses functional update", async () => {
+    const spies = seedLocalStorage([{ _id: "seed" }]);
+    renderWithProvider();
+
+    await act(async () => {
+      screen.getByTestId("push-item").click(); // [...prev, { _id: "x" }]
+    });
+
+    expect(spies.setItem).toHaveBeenCalledWith(
+      "cart",
+      JSON.stringify([{ _id: "seed" }, { _id: "x" }])
+    );
+  });
+
+  test("notifies consumers (re-render occurs on cart change)", async () => {
+    seedLocalStorage([]);
+    renderWithProvider();
+
+    const before = window.__probe__.renders;
+    await act(async () => {
+      screen.getByTestId("push-item").click();
+    });
+    const after = window.__probe__.renders;
+
+    expect(after).toBeGreaterThan(before); // consumer re-rendered
+  });
+
+  test("persists across reloads (unmount/remount reads from saved cart)", async () => {
+    const spies = seedLocalStorage([]);
+    const { unmount } = render(
+      <CartProvider>
+        <Probe />
+      </CartProvider>
+    );
+
+    // Trigger a write: setCart([{ _id: "y" }])
+    await act(async () => {
+      screen.getByTestId("replace").click();
+    });
+
+    // Persist happens in a useEffect → wait for it
+    await waitFor(() => {
+      expect(spies.setItem).toHaveBeenCalledWith(
+        "cart",
+        JSON.stringify([{ _id: "y" }])
+      );
+    });
+
+    // Simulate a page reload: unmount, then make getItem return the saved cart
+    unmount();
+    spies.getItem.mockImplementation((key) =>
+      key === "cart" ? JSON.stringify([{ _id: "y" }]) : null
+    );
+
+    // Fresh render (not rerender), so the Provider's mount effect runs again
+    render(
+      <CartProvider>
+        <Probe />
+      </CartProvider>
+    );
+
+    // The Provider reads localStorage in a mount effect → wait for it
+    await waitFor(() => {
+      expect(screen.getByTestId("cart-length")).toHaveTextContent("1");
+    });
+    expect(window.__probe__.cart).toEqual([{ _id: "y" }]);
+  });
+
+  test("handles invalid JSON in localStorage (optional if provider adds try/catch)", async () => {
+    const spies = seedLocalStorage(null);
+    spies.getItem.mockImplementation((key) =>
+      key === "cart" ? "{not-json" : null
+    );
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    // With try/catch in provider, this should not throw
+    renderWithProvider();
+
+    // Defaults to empty cart, logs error, and removes the bad key
+    expect(screen.getByTestId("cart-length")).toHaveTextContent("0");
+    expect(errorSpy).toHaveBeenCalled();
+    expect(spies.removeItem).toHaveBeenCalledWith("cart");
+
+    errorSpy.mockRestore();
+  });
+});
+
