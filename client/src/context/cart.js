@@ -11,9 +11,8 @@ const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
-  const skipFirstPersist = useRef(true); // 👈 new
+  const skipFirstPersist = useRef(true);
 
-  // read once on mount
   useEffect(() => {
     const raw = localStorage.getItem("cart");
     if (raw) {
@@ -26,11 +25,10 @@ export const CartProvider = ({ children }) => {
     }
   }, []);
 
-  // write when cart changes, but skip the very first run
   useEffect(() => {
     if (skipFirstPersist.current) {
       skipFirstPersist.current = false;
-      return; // 👈 don't write on initial mount
+      return;
     }
     try {
       localStorage.setItem("cart", JSON.stringify(cart));
