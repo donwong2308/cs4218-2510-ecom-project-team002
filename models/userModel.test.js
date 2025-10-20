@@ -33,10 +33,6 @@ describe("User Model Integration Tests", () => {
   });
 
   describe("User Model", () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
     describe("User Creation and Validation", () => {
       test("should create a user successfully with valid data", async () => {
         // Arrange

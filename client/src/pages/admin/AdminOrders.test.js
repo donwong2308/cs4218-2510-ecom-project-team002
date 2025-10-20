@@ -14,14 +14,20 @@ jest.mock("../../components/Layout", () => ({ children, title }) => (
   <div title={title}>{children}</div>
 ));
 
-// Properly mock antd components
+// Properly mock antd components for v5 with options array
 jest.mock("antd", () => {
-  const Select = ({ children, defaultValue, onChange, bordered }) => (
+  const Select = ({ children, defaultValue, onChange, bordered, options }) => (
     <select
       data-testid="select"
       defaultValue={defaultValue}
       onChange={(e) => onChange && onChange(e.target.value)}
     >
+      {options &&
+        options.map((option) => (
+          <option key={option.key} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       {children}
     </select>
   );
