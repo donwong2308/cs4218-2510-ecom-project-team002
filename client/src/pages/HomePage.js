@@ -102,6 +102,7 @@ const HomePage = () => {
         radio,
       });
       setProducts(data?.products);
+      setTotal(data?.products.length);
     } catch (error) {
       console.log(error);
     }
