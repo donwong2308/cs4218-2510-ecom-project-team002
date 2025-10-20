@@ -116,7 +116,7 @@ test.describe('E2E Suite: Database Error Handling', () => {
 
     const emailInput = page.locator('input[type="email"], input[name="email"]');
     const passwordInput = page.locator('input[type="password"], input[name="password"]');
-    const loginButton = page.locator('button[type="submit"], button:has-text("Login")');
+    const loginButton = page.locator('button:has-text("LOGIN")');
 
     if (await emailInput.count() > 0 && await passwordInput.count() > 0) {
       await emailInput.fill('test@example.com');
