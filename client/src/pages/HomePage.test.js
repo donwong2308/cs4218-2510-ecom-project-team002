@@ -214,27 +214,26 @@ describe("HomePage Component", () => {
   });
 
   test("resets filters when reset button is clicked", async () => {
-    // Mock window.location.reload
-    const mockReload = jest.fn();
-    Object.defineProperty(window, "location", {
-      value: { reload: mockReload },
-      writable: true,
-    });
-
     render(
       <BrowserRouter>
         <HomePage />
       </BrowserRouter>
     );
 
-    // Wait for the reset button to be available
     await screen.findByText("RESET FILTERS");
 
-    // Now click the button
-    const resetButton = screen.getByText("RESET FILTERS");
-    fireEvent.click(resetButton);
+    axios.get.mockClear();
+    axios.post.mockClear();
 
-    expect(mockReload).toHaveBeenCalled();
+    fireEvent.click(screen.getByText("RESET FILTERS"));
+
+    await waitFor(() => {
+      expect(axios.get).toHaveBeenCalledWith("/api/v1/product/product-list/1");
+    });
+    await waitFor(() => {
+      expect(axios.get).toHaveBeenCalledWith("/api/v1/product/product-count");
+    });
+    expect(axios.post).not.toHaveBeenCalled();
   });
 
   test("filters products by category when checkbox is clicked", async () => {
@@ -669,18 +668,14 @@ describe("HomePage Component", () => {
       </BrowserRouter>
     );
 
-    // Wait for initial render
     await screen.findByText("Filter By Category");
 
-    // Clear previous API call tracking
     axios.get.mockClear();
     axios.post.mockClear();
 
-    // First click a price radio filter
     const priceRadios = screen.getAllByRole("radio");
     fireEvent.click(priceRadios[0]);
 
-    // Verify filter API was called
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
         "/api/v1/product/product-filters",
@@ -690,14 +685,11 @@ describe("HomePage Component", () => {
       );
     });
 
-    // Clear API call tracking again
     axios.post.mockClear();
 
-    // Now click a category checkbox as well
     const checkboxes = await screen.findAllByRole("checkbox");
     fireEvent.click(checkboxes[0]);
 
-    // Verify filter API was called again with both filters
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
         "/api/v1/product/product-filters",
@@ -708,12 +700,29 @@ describe("HomePage Component", () => {
       );
     });
 
-    // Now uncheck all filters
-    fireEvent.click(checkboxes[0]); // Uncheck category
+    axios.post.mockClear();
 
-    // Verify getAllProducts is called when filters are cleared
+    fireEvent.click(checkboxes[0]); // uncheck the category
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(
+        "/api/v1/product/product-filters",
+        expect.objectContaining({
+          checked: [],
+          radio: expect.any(Array),
+        })
+      );
+    });
+
+    axios.get.mockClear();
+
+    fireEvent.click(screen.getByText("RESET FILTERS"));
+
     await waitFor(() => {
       expect(axios.get).toHaveBeenCalledWith("/api/v1/product/product-list/1");
+    });
+    await waitFor(() => {
+      expect(axios.get).toHaveBeenCalledWith("/api/v1/product/product-count");
     });
   });
 });

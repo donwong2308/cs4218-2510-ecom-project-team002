@@ -28,7 +28,6 @@ describe('Database Connection', () => {
 
     mongoose.connect.mockResolvedValue(mockConnection);
 
-    // Original function doesn't return anything, so we don't expect a return value
     const result = await connectDB();
 
     // Original function only passes MONGO_URL, no options
