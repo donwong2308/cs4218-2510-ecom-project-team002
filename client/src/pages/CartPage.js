@@ -39,7 +39,6 @@ const CartPage = () => {
       let index = myCart.findIndex((item) => item._id === pid);
       myCart.splice(index, 1);
       setCart(myCart);
-      localStorage.setItem("cart", JSON.stringify(myCart));
     } catch (error) {
       console.error(error);
     }
@@ -127,8 +126,8 @@ const CartPage = () => {
                     />
                   </div>
                   <div className="col-md-4">
-                    <p>{p.name}</p>
-                    <p>{p.description.substring(0, 30)}</p>
+                    <p className="card-title">{p.name}</p>
+                    <p className="card-text">{p.description.substring(0, 30)}</p>
                     <p>Price : {p.price}</p>
                   </div>
                   <div className="col-md-4 cart-remove-btn">
@@ -146,7 +145,7 @@ const CartPage = () => {
               <h2>Cart Summary</h2>
               <p>Total | Checkout | Payment</p>
               <hr />
-              <h4>Total : {totalPrice()} </h4>
+              <h4 className="cart-total">Total : {totalPrice()} </h4>
               {auth?.user?.address ? (
                 <>
                   <div className="mb-3">
