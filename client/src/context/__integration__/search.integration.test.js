@@ -106,4 +106,3 @@ describe("Search Context Integration", () => {
   });
 });
 
-
