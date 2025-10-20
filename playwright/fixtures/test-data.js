@@ -55,3 +55,30 @@ export function generateUniqueEmail(prefix = 'test') {
   const timestamp = Date.now();
   return `${prefix}${timestamp}@playwright.com`;
 }
+
+// Default data you can reuse in tests that touch categories/products
+export const DEFAULTS = {
+  categorySlug: "electronics",
+  expectedNames: ["Laptop", "Smartphone"], // for your seeded data
+};
+
+// Minimal, stable selectors used across specs
+export const selectors = {
+  filtersColumn: ".filters",
+  productCard: "div.card",
+  productTitleInCard: "h5, h3, h2",
+  loadMoreBtn: 'button:has-text("Loadmore")', // matches your "Loadmore" button
+  productPriceInCard: ".card-price",
+};
+
+export const FILTER_LABELS = {
+  categories: ["Electronics", "Book", "Clothing"],
+  prices: [
+    "$0 to 19",
+    "$20 to 39",
+    "$40 to 59",
+    "$60 to 79",
+    "$80 to 99",
+    "$100 or more",
+  ],
+};

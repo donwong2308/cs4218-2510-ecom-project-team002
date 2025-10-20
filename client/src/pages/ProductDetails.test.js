@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/extend-expect";
 import axios from "axios";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProductDetails from "./ProductDetails";
+import { act } from "react-dom/test-utils";
 
 jest.mock("axios");
 
@@ -13,6 +14,15 @@ jest.mock("../components/Layout", () => ({
 }));
 
 jest.mock("../styles/ProductDetailsStyles.css", () => ({}), { virtual: true });
+
+// ---- act-wrapped render (drop-in fix) ----
+const renderWithAct = async (ui) => {
+  let utils;
+  await act(async () => {
+    utils = render(ui);
+  });
+  return utils;
+};
 
 Object.defineProperty(window, "localStorage", {
   value: {
@@ -36,6 +46,9 @@ window.matchMedia =
 describe("ProductDetails", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    axios.get.mockImplementation(async (url) => {
+      return { data: {} };
+    });
   });
 
   it("Loads product by slug, shows details, renders related products", async () => {
@@ -73,7 +86,7 @@ describe("ProductDetails", () => {
         },
       });
 
-    render(
+    await renderWithAct(
       <MemoryRouter initialEntries={["/product/phone-1"]}>
         <Routes>
           <Route path="/product/:slug" element={<ProductDetails />} />
@@ -92,8 +105,12 @@ describe("ProductDetails", () => {
     expect(
       await screen.findByText(/Description\s*:\s*A very smart phone/i)
     ).toBeInTheDocument();
-    expect(await screen.findByText(/Price\s*:\s*\$999\.00/i)).toBeInTheDocument();
-    expect(await screen.findByText(/Category\s*:\s*Gadgets/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Price\s*:\s*\$999\.00/i)
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Category\s*:\s*Gadgets/i)
+    ).toBeInTheDocument();
 
     const mainImg = await screen.findByRole("img", { name: /Phone/i });
     expect(mainImg).toHaveAttribute("src", "/api/v1/product/product-photo/p1");
@@ -154,30 +171,23 @@ describe("ProductDetails", () => {
         },
       });
 
-    const { container } = render(
+    await renderWithAct(
       <MemoryRouter initialEntries={["/product/phone-1"]}>
         <Routes>
-          <Route
-            path="/product/:slug"
-            element={<ProductDetails />}
-          />
+          <Route path="/product/:slug" element={<ProductDetails />} />
         </Routes>
       </MemoryRouter>
     );
 
     await screen.findByText("Tablet");
     const moreBtns = screen.getAllByRole("button", { name: /more details/i });
-    
-    // Just verify the button exists and can be clicked (navigation is handled by MemoryRouter)
+
     expect(moreBtns[0]).toBeInTheDocument();
     fireEvent.click(moreBtns[0]);
-    
-    // The actual navigation would be tested in E2E tests
-    // Here we just verify the button has the correct onClick handler
   });
 
   it("Slug missing: Does not fetch", async () => {
-    render(
+    await renderWithAct(
       <MemoryRouter initialEntries={["/product"]}>
         <Routes>
           <Route path="/product" element={<ProductDetails />} />
@@ -194,7 +204,7 @@ describe("ProductDetails", () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     axios.get.mockRejectedValueOnce(new Error("network down"));
 
-    render(
+    await renderWithAct(
       <MemoryRouter initialEntries={["/product/phone-1"]}>
         <Routes>
           <Route path="/product/:slug" element={<ProductDetails />} />
@@ -226,7 +236,7 @@ describe("ProductDetails", () => {
         data: { products: [] },
       });
 
-    render(
+    await renderWithAct(
       <MemoryRouter initialEntries={["/product/phone-1"]}>
         <Routes>
           <Route path="/product/:slug" element={<ProductDetails />} />
@@ -257,7 +267,7 @@ describe("ProductDetails", () => {
       })
       .mockRejectedValueOnce(new Error("related down"));
 
-    render(
+    await renderWithAct(
       <MemoryRouter initialEntries={["/product/phone-1"]}>
         <Routes>
           <Route path="/product/:slug" element={<ProductDetails />} />
@@ -282,5 +292,4 @@ describe("ProductDetails", () => {
 
     logSpy.mockRestore();
   });
-
 });
