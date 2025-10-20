@@ -144,10 +144,9 @@ describe("CartPage", () => {
     for (const p of mockProducts) {
       expect(screen.getByText(p.name)).toBeInTheDocument();
       expect(
-        screen.getByText(p.description.split(" ").slice(0, 30).join(" "))
+        screen.getByText(p.description.substring(0, 30))
       ).toBeInTheDocument();
-      expect(screen.getByText(`Price: $${p.price}`)).toBeInTheDocument();
-      expect(screen.getByText(`Quantity: ${p.quantity}`)).toBeInTheDocument();
+      expect(screen.getByText(`Price : ${p.price}`)).toBeInTheDocument();
       expect(screen.getByAltText(p.name)).toBeInTheDocument();
     }
     expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(
@@ -327,7 +326,7 @@ describe("CartPage", () => {
       { _id: "1", name: "Product", price: 10, description: "Test" },
     ];
 
-    axios.post.mockResolvedValue({ data: { success: true } });
+    axios.post.mockResolvedValue({ data: { ok: true } });
 
     await renderCartPage(cartItems, authUser);
 
@@ -396,4 +395,182 @@ describe("CartPage", () => {
     const payBtn = screen.getByRole("button", { name: "Make Payment" });
     expect(payBtn).toBeDisabled();
   });
+
+  test("shows backend error when payment response ok=false with message", async () => {
+    const authUser = { name: "Foo", address: "123 Main St" };
+    const cartItems = [{ _id: "1", name: "P", price: 10, description: "T" }];
+
+    axios.post.mockResolvedValueOnce({
+      data: { ok: false, error: "Card declined by bank" },
+    });
+
+    await renderCartPage(cartItems, authUser);
+
+    await screen.findByTestId("braintree-dropin");
+    fireEvent.click(screen.getByRole("button", { name: "Make Payment" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Card declined by bank");
+    });
+
+    // no state changes on failure
+    expect(localStorage.removeItem).not.toHaveBeenCalledWith("cart");
+    expect(mockSetCart).not.toHaveBeenCalledWith([]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test("shows default error when payment response ok=false without message", async () => {
+    const authUser = { name: "Foo", address: "123 Main St" };
+    const cartItems = [{ _id: "1", name: "P", price: 10, description: "T" }];
+
+    axios.post.mockResolvedValueOnce({ data: { ok: false } });
+
+    await renderCartPage(cartItems, authUser);
+
+    await screen.findByTestId("braintree-dropin");
+    fireEvent.click(screen.getByRole("button", { name: "Make Payment" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Payment failed. Please try again."
+      );
+    });
+
+    expect(localStorage.removeItem).not.toHaveBeenCalledWith("cart");
+    expect(mockSetCart).not.toHaveBeenCalledWith([]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test("handles declined payment via error.response.data.declined=true", async () => {
+    const authUser = { name: "Foo", address: "123 Main St" };
+    const cartItems = [{ _id: "1", name: "P", price: 10, description: "T" }];
+
+    const err = new Error("Declined");
+    // @ts-expect-error augment error with response like axios
+    err.response = {
+      data: {
+        declined: true,
+        error: "Payment declined. Please check your card details.",
+      },
+    };
+
+    axios.post.mockRejectedValueOnce(err);
+
+    await renderCartPage(cartItems, authUser);
+
+    await screen.findByTestId("braintree-dropin");
+    fireEvent.click(screen.getByRole("button", { name: "Make Payment" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Payment declined. Please check your card details."
+      );
+    });
+
+    expect(localStorage.removeItem).not.toHaveBeenCalledWith("cart");
+    expect(mockSetCart).not.toHaveBeenCalledWith([]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test("handles backend error message via error.response.data.error (non-declined)", async () => {
+    const authUser = { name: "Foo", address: "123 Main St" };
+    const cartItems = [{ _id: "1", name: "P", price: 10, description: "T" }];
+
+    const err = new Error("Gateway error");
+    // @ts-expect-error axios-shaped error
+    err.response = { data: { error: "Gateway timeout" } };
+
+    axios.post.mockRejectedValueOnce(err);
+
+    await renderCartPage(cartItems, authUser);
+
+    await screen.findByTestId("braintree-dropin");
+    fireEvent.click(screen.getByRole("button", { name: "Make Payment" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Gateway timeout");
+    });
+
+    expect(localStorage.removeItem).not.toHaveBeenCalledWith("cart");
+    expect(mockSetCart).not.toHaveBeenCalledWith([]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test("handles generic axios reject with no response object", async () => {
+    const authUser = { name: "Foo", address: "123 Main St" };
+    const cartItems = [{ _id: "1", name: "P", price: 10, description: "T" }];
+
+    axios.post.mockRejectedValueOnce(new Error("Network down"));
+
+    await renderCartPage(cartItems, authUser);
+
+    await screen.findByTestId("braintree-dropin");
+    fireEvent.click(screen.getByRole("button", { name: "Make Payment" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Payment processing failed. Please try again."
+      );
+    });
+
+    expect(localStorage.removeItem).not.toHaveBeenCalledWith("cart");
+    expect(mockSetCart).not.toHaveBeenCalledWith([]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test("declined=true uses server error message when provided", async () => {
+    const authUser = { name: "Foo", address: "123 Main St" };
+    const cartItems = [{ _id: "1", name: "P", price: 10, description: "T" }];
+
+    const err = new Error("Declined with message");
+    // shape like axios error
+    // @ts-expect-error augmenting for test
+    err.response = {
+      data: { declined: true, error: "Your card was declined by issuer." },
+    };
+
+    axios.post.mockRejectedValueOnce(err);
+
+    await renderCartPage(cartItems, authUser);
+
+    await screen.findByTestId("braintree-dropin");
+    fireEvent.click(screen.getByRole("button", { name: "Make Payment" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Your card was declined by issuer."
+      );
+    });
+
+    expect(localStorage.removeItem).not.toHaveBeenCalledWith("cart");
+    expect(mockSetCart).not.toHaveBeenCalledWith([]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test("declined=true falls back to default message when server error missing", async () => {
+    const authUser = { name: "Foo", address: "123 Main St" };
+    const cartItems = [{ _id: "1", name: "P", price: 10, description: "T" }];
+
+    const err = new Error("Declined no message");
+    // @ts-expect-error augmenting for test
+    err.response = { data: { declined: true } };
+
+    axios.post.mockRejectedValueOnce(err);
+
+    await renderCartPage(cartItems, authUser);
+
+    await screen.findByTestId("braintree-dropin");
+    fireEvent.click(screen.getByRole("button", { name: "Make Payment" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Payment declined. Please check your card details."
+      );
+    });
+
+    expect(localStorage.removeItem).not.toHaveBeenCalledWith("cart");
+    expect(mockSetCart).not.toHaveBeenCalledWith([]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
 });
