@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Checkbox, Radio } from "antd";
 import { Prices } from "../components/Prices";
@@ -15,41 +15,21 @@ const HomePage = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [checked, setChecked] = useState([]);
-  const [radio, setRadio] = useState([]);
+  const [radio, setRadio] = useState(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const reqIdRef = useRef(0);
 
-  //get all cat
   const getAllCategory = async () => {
     try {
       const { data } = await axios.get("/api/v1/category/get-category");
-      if (data?.success) {
-        setCategories(data?.category);
-      }
+      if (data?.success) setCategories(data?.category);
     } catch (error) {
       console.log(error);
     }
   };
 
-  useEffect(() => {
-    getAllCategory();
-    getTotal();
-  }, []);
-  //get products
-  const getAllProducts = async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(`/api/v1/product/product-list/${page}`);
-      setLoading(false);
-      setProducts(data.products);
-    } catch (error) {
-      setLoading(false);
-      console.log(error);
-    }
-  };
-
-  //getTOtal COunt
   const getTotal = async () => {
     try {
       const { data } = await axios.get("/api/v1/product/product-count");
@@ -60,62 +40,89 @@ const HomePage = () => {
   };
 
   useEffect(() => {
-    if (page === 1) return;
-    loadMore();
-  }, [page]);
-  //load more
-  const loadMore = async () => {
+    getAllCategory();
+    getTotal();
+    getAllProducts(1, true);
+  }, []);
+
+  const getAllProducts = async (p = page, replace = false) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`/api/v1/product/product-list/${page}`);
+      const { data } = await axios.get(`/api/v1/product/product-list/${p}`);
       setLoading(false);
-      setProducts([...products, ...data?.products]);
+      if (replace) {
+        setProducts(data.products);
+      } else {
+        setProducts((prev) => [...prev, ...data?.products]);
+      }
     } catch (error) {
-      console.log(error);
       setLoading(false);
+      console.log(error);
     }
   };
 
-  // filter by cat
+  useEffect(() => {
+    if (page === 1) return;
+    if (checked.length === 0 && !radio) {
+      getAllProducts(page, false);
+    }
+  }, [page]);
+
   const handleFilter = (value, id) => {
     let all = [...checked];
-    if (value) {
-      all.push(id);
-    } else {
-      all = all.filter((c) => c !== id);
-    }
+    if (value) all.push(id);
+    else all = all.filter((c) => c !== id);
     setChecked(all);
+    setPage(1);
   };
-  useEffect(() => {
-    if (!checked.length || !radio.length) getAllProducts();
-  }, [checked.length, radio.length]);
 
-  useEffect(() => {
-    if (checked.length || radio.length) filterProduct();
-  }, [checked, radio]);
+  const sanitizeRadioForPayload = (arr) => {
+    if (!arr || arr.length !== 2) return [];
+    const [min, max] = arr;
+    const safeMax = Number.isFinite(max) ? max : 1_000_000_000;
+    return [Number(min), Number(safeMax)];
+  };
 
-  //get filterd product
-  const filterProduct = async () => {
+  const filterProduct = async (cats, priceRange) => {
+    const id = ++reqIdRef.current;
     try {
-      const { data } = await axios.post("/api/v1/product/product-filters", {
-        checked,
-        radio,
-      });
-      setProducts(data?.products);
+      const payload = {
+        checked: cats,
+        radio: sanitizeRadioForPayload(priceRange),
+      };
+      const { data } = await axios.post(
+        "/api/v1/product/product-filters",
+        payload
+      );
+      if (id !== reqIdRef.current) return;
+      setProducts(data?.products || []);
+      setTotal((data?.products || []).length);
     } catch (error) {
+      if (id !== reqIdRef.current) return;
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    const noCategory = checked.length === 0;
+    const noPrice = !radio || radio.length === 0;
+    setPage(1);
+    if (noCategory && noPrice) {
+      getAllProducts(1, true);
+      getTotal();
+    } else {
+      filterProduct(noCategory ? [] : checked, noPrice ? [] : radio);
+    }
+  }, [checked, radio]);
+
   return (
     <Layout title={"ALL Products - Best offers "}>
-      {/* banner image */}
       <img
         src="/images/Virtual.png"
         className="banner-img"
         alt="bannerimage"
         width={"100%"}
       />
-      {/* banner image */}
       <div className="container-fluid row mt-3 home-page">
         <div className="col-md-3 filters">
           <h4 className="text-center">Filter By Category</h4>
@@ -129,10 +136,15 @@ const HomePage = () => {
               </Checkbox>
             ))}
           </div>
-          {/* price filter */}
           <h4 className="text-center mt-4">Filter By Price</h4>
           <div className="d-flex flex-column">
-            <Radio.Group onChange={(e) => setRadio(e.target.value)}>
+            <Radio.Group
+              value={radio ?? undefined}
+              onChange={(e) => {
+                setRadio(e.target.value);
+                setPage(1);
+              }}
+            >
               {Prices?.map((p) => (
                 <div key={p._id}>
                   <Radio value={p.array}>{p.name}</Radio>
@@ -143,7 +155,13 @@ const HomePage = () => {
           <div className="d-flex flex-column">
             <button
               className="btn btn-danger"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                setChecked([]);
+                setRadio(null);
+                setPage(1);
+                getAllProducts(1, true);
+                getTotal();
+              }}
             >
               RESET FILTERS
             </button>
@@ -153,7 +171,7 @@ const HomePage = () => {
           <h1 className="text-center">All Products</h1>
           <div className="d-flex flex-wrap">
             {products?.map((p) => (
-              <div className="card m-2" key={p._id}>
+              <div className="card m-2" key={p._id} data-id={p._id}>
                 <img
                   src={`/api/v1/product/product-photo/${p._id}`}
                   className="card-img-top"
@@ -162,7 +180,7 @@ const HomePage = () => {
                 <div className="card-body">
                   <div className="card-name-price">
                     <h5 className="card-title">{p.name}</h5>
-                    <h5 className="card-title card-price">
+                    <h5 className="card-title card-price" data-testid="price">
                       {p.price.toLocaleString("en-US", {
                         style: "currency",
                         currency: "USD",
@@ -198,24 +216,27 @@ const HomePage = () => {
             ))}
           </div>
           <div className="m-2 p-3">
-            {products && products.length < total && (
-              <button
-                className="btn loadmore"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setPage(page + 1);
-                }}
-              >
-                {loading ? (
-                  "Loading ..."
-                ) : (
-                  <>
-                    {" "}
-                    Loadmore <AiOutlineReload />
-                  </>
-                )}
-              </button>
-            )}
+            {products &&
+              products.length < total &&
+              checked.length === 0 &&
+              !radio && (
+                <button
+                  className="btn loadmore"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((x) => x + 1);
+                  }}
+                >
+                  {loading ? (
+                    "Loading ..."
+                  ) : (
+                    <>
+                      {" "}
+                      Loadmore <AiOutlineReload />
+                    </>
+                  )}
+                </button>
+              )}
           </div>
         </div>
       </div>

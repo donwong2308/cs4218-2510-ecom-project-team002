@@ -99,7 +99,7 @@ export const getSingleProductController = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).send({
+    res.status(404).send({
       success: false,
       message: "Eror while getitng single product",
       error: error.message,
