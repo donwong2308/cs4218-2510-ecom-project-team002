@@ -1,7 +1,7 @@
-// tests/home.filters.live.spec.js
 import { test, expect } from "@playwright/test";
-import { selectors, FILTER_LABELS } from "../fixtures/test-data.js";
+import { homePageSelectors, FILTER_LABELS } from "../fixtures/test-data.js";
 
+const selectors = homePageSelectors;
 const CATEGORY_LABELS = FILTER_LABELS.categories;
 const PRICE_LABELS = FILTER_LABELS.prices;
 
