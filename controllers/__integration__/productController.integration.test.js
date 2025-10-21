@@ -1,6 +1,15 @@
 
 import request from "supertest";
 import express from "express";
+// Mock braintree before importing routes/controllers to avoid env requirements
+jest.mock("braintree", () => ({
+  BraintreeGateway: jest.fn().mockImplementation(() => ({
+    clientToken: { generate: jest.fn((_, cb) => cb(null, { clientToken: "test" })) },
+    transaction: { sale: jest.fn((_, cb) => cb(null, { success: true })) },
+  })),
+  Environment: { Sandbox: "Sandbox" },
+}));
+
 import productRoutes from "../../routes/productRoutes.js";
 import * as controller from "../../controllers/productController.js";
 import productModel from "../../models/productModel.js";
