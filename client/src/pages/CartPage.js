@@ -39,6 +39,8 @@ const CartPage = () => {
       let index = myCart.findIndex((item) => item._id === pid);
       myCart.splice(index, 1);
       setCart(myCart);
+      // persist to localStorage as tests expect
+      localStorage.setItem("cart", JSON.stringify(myCart));
     } catch (error) {
       console.error(error);
     }
