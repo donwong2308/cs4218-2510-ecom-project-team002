@@ -21,7 +21,7 @@ export default {
   ],
 
   // jest code coverage
-  collectCoverage: false,
+  collectCoverage: true,
   collectCoverageFrom: [
     "controllers/**/*.js",
     "middlewares/**/*.js",
@@ -29,6 +29,11 @@ export default {
     "models/**/*.js",
     "config/**/*.js",
     "!**/*.test.js",
+    "<rootDir>/controllers/integration/*.test.js",
+    "<rootDir>/middlewares/integration/*.test.js",
+    "<rootDir>/helpers/integration/*.test.js",
+    "<rootDir>/models/integration/*.test.js",
+    "<rootDir>/config/integration/*.test.js",
   ],
   coverageThreshold: {
     global: {

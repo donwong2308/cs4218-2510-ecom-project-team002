@@ -38,6 +38,14 @@
  * TEST PHILOSOPHY:
  * Integration tests verify how the AdminOrders component works with its ecosystem.
  * We test the complete order fetching, display, and status update workflow end-to-end.
+ *
+ * 🚨 ROUTING STRATEGY: MemoryRouter vs BrowserRouter
+ * ✅ We use MemoryRouter for better test isolation and control:
+ * - No URL side effects between tests
+ * - Predictable routing state for each test
+ * - Can simulate specific route scenarios easily
+ * - Better performance (no DOM URL manipulation)
+ * ❌ BrowserRouter would cause test interference and unpredictable state
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -54,9 +62,9 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { BrowserRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
-import AdminOrders from "../admin/AdminOrders";
+import AdminOrders from "../AdminOrders";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MOCKS CONFIGURATION
@@ -67,7 +75,7 @@ jest.mock("axios");
 const mockedAxios = axios;
 
 // Mock the useAuth hook
-jest.mock("../../context/auth", () => ({
+jest.mock("../../../context/auth", () => ({
   useAuth: jest.fn(),
 }));
 
@@ -79,7 +87,7 @@ axios.defaults = {
 };
 
 // Mock Layout component - keep it real but simple for integration
-jest.mock("../../components/Layout", () => ({ children, title }) => (
+jest.mock("../../../components/Layout", () => ({ children, title }) => (
   <div data-testid="layout" data-title={title}>
     <div data-testid="layout-title">{title}</div>
     {children}
@@ -87,7 +95,7 @@ jest.mock("../../components/Layout", () => ({ children, title }) => (
 ));
 
 // Mock AdminMenu component
-jest.mock("../../components/AdminMenu", () => () => (
+jest.mock("../../../components/AdminMenu", () => () => (
   <div data-testid="admin-menu">Admin Navigation Menu</div>
 ));
 
@@ -269,18 +277,42 @@ const emptyOrdersResponse = [];
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Render AdminOrders component with authentication context and router
+ * Render AdminOrders component with authentication context and MemoryRouter
  * @param {Object} authContextValue - Auth context value to provide
+ * @param {string} initialRoute - Initial route for MemoryRouter (default: /dashboard/admin/orders)
+ *
+ * 🚨 WHY MEMORYROUTER INSTEAD OF BROWSERROUTER?
+ *
+ * ✅ MemoryRouter Benefits:
+ * - 🔒 Test Isolation: Each test gets fresh routing state
+ * - 🎯 No URL Side Effects: Tests don't affect browser URL
+ * - 📍 Controlled Navigation: Can set specific initial routes
+ * - ⚡ Better Performance: No DOM manipulation needed
+ * - 🧪 Predictable Testing: No interference between tests
+ *
+ * ❌ BrowserRouter Problems in Tests:
+ * - 🌐 Uses real browser URL (can cause interference)
+ * - 💥 URL state persists between tests
+ * - 🔄 Can cause navigation side effects
+ * - 🐛 Harder to simulate specific route scenarios
  */
-const renderAdminOrdersWithAuth = (authContextValue) => {
+const renderAdminOrdersWithAuth = (
+  authContextValue,
+  initialRoute = "/dashboard/admin/orders"
+) => {
   // Mock the useAuth hook to return our test values
-  const mockUseAuth = require("../../context/auth").useAuth;
+  const mockUseAuth = require("../../../context/auth").useAuth;
   mockUseAuth.mockReturnValue([authContextValue, jest.fn()]);
 
+  // 🚨 IMPORTANT: Using MemoryRouter for better test isolation and control
   return render(
-    <BrowserRouter>
-      <AdminOrders />
-    </BrowserRouter>
+    <MemoryRouter initialEntries={[initialRoute]}>
+      <Routes>
+        <Route path="/dashboard/admin/orders" element={<AdminOrders />} />
+        <Route path="*" element={<AdminOrders />} />{" "}
+        {/* Fallback route for edge cases */}
+      </Routes>
+    </MemoryRouter>
   );
 };
 
@@ -299,6 +331,36 @@ const createUnauthenticatedContext = () => ({
   user: null,
   token: null,
 });
+
+/**
+ * 🎯 ADVANCED MEMORYROUTER HELPER: Test different routing scenarios
+ * This demonstrates why MemoryRouter is superior for testing
+ * (Available for future complex routing tests)
+ */
+// eslint-disable-next-line no-unused-vars
+const renderAdminOrdersWithRoute = (authContext, routeConfig = {}) => {
+  const {
+    initialEntries = ["/dashboard/admin/orders"],
+    // eslint-disable-next-line no-unused-vars
+    currentRoute = "/dashboard/admin/orders",
+    otherRoutes = [],
+  } = routeConfig;
+
+  const mockUseAuth = require("../../../context/auth").useAuth;
+  mockUseAuth.mockReturnValue([authContext, jest.fn()]);
+
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <Routes>
+        <Route path="/dashboard/admin/orders" element={<AdminOrders />} />
+        {otherRoutes.map((route, index) => (
+          <Route key={index} path={route.path} element={route.element} />
+        ))}
+        <Route path="*" element={<div>404 Not Found</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TEST SUITE: ADMIN ORDERS COMPONENT INTEGRATION TESTS
@@ -638,6 +700,48 @@ describe("AdminOrders Component Integration Tests", () => {
       // ───────────────────────────────────────────────────────────────
       expect(screen.queryByText("Processing")).not.toBeInTheDocument();
       expect(screen.queryByText("Shipped")).not.toBeInTheDocument();
+    });
+
+    /**
+     * TEST 2.4: Empty Orders Integration
+     * ─────────────────────────────────────────────────────────────────────────
+     * Integration Points:
+     * - AdminOrders → axios → GET /api/v1/auth/all-orders (empty array)
+     * - AdminOrders → conditional rendering of order cards and tables
+     */
+    it("should render no order cards when the API returns an empty list", async () => {
+      // ═══════════════════════════════════════════════════════════════
+      // ARRANGE: Setup authenticated admin user with empty API response
+      // ═══════════════════════════════════════════════════════════════
+
+      const authContext = createAdminAuthenticatedContext();
+
+      mockedAxios.get.mockResolvedValueOnce({
+        data: [],
+      });
+
+      // ═══════════════════════════════════════════════════════════════
+      // ACT: Render component and wait for API resolution
+      // ═══════════════════════════════════════════════════════════════
+
+      renderAdminOrdersWithAuth(authContext);
+
+      await waitFor(() => {
+        expect(mockedAxios.get).toHaveBeenCalledWith("/api/v1/auth/all-orders");
+      });
+
+      // ═══════════════════════════════════════════════════════════════
+      // ASSERT: Verify no order structures are rendered
+      // ═══════════════════════════════════════════════════════════════
+
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Price :/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Success|Failed/)).not.toBeInTheDocument();
+
+      // Basic scaffold still present
+      expect(
+        screen.getByRole("heading", { name: "All Orders" })
+      ).toBeInTheDocument();
     });
   });
 
@@ -1167,7 +1271,7 @@ describe("AdminOrders Component Integration Tests", () => {
  * ADMIN ORDERS COMPONENT INTEGRATION TEST SUMMARY
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * TESTS IMPLEMENTED: 12 integration tests across 5 groups
+ * TESTS IMPLEMENTED: 10 integration tests across 5 groups
  *
  * GROUP 1: COMPONENT STRUCTURE & LAYOUT (1 test):
  * ✅ Layout integration with correct page title and structure
@@ -1223,5 +1327,5 @@ describe("AdminOrders Component Integration Tests", () => {
  * within its ecosystem. We test the complete admin workflow from authentication
  * through data fetching, display, and order status management, ensuring all
  * integrations function properly for administrative users.
- * ═══════════════════════════════════════════════════════════════════════════
+ *
  */

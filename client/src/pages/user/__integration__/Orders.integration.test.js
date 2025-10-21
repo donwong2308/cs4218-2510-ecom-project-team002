@@ -47,7 +47,7 @@ import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { BrowserRouter } from "react-router-dom";
 import axios from "axios";
-import Orders from "../user/Orders";
+import Orders from "../Orders";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MOCKS CONFIGURATION
@@ -58,7 +58,7 @@ jest.mock("axios");
 const mockedAxios = axios;
 
 // Mock the useAuth hook
-jest.mock("../../context/auth", () => ({
+jest.mock("../../../context/auth", () => ({
   useAuth: jest.fn(),
 }));
 
@@ -70,7 +70,7 @@ axios.defaults = {
 };
 
 // Mock Layout component - keep it real but simple for integration
-jest.mock("../../components/Layout", () => ({ children, title }) => (
+jest.mock("../../../components/Layout", () => ({ children, title }) => (
   <div data-testid="layout" data-title={title}>
     <div data-testid="layout-title">{title}</div>
     {children}
@@ -78,7 +78,7 @@ jest.mock("../../components/Layout", () => ({ children, title }) => (
 ));
 
 // Mock UserMenu component
-jest.mock("../../components/UserMenu", () => () => (
+jest.mock("../../../components/UserMenu", () => () => (
   <div data-testid="user-menu">User Navigation Menu</div>
 ));
 
@@ -235,7 +235,7 @@ const emptyOrdersResponse = [];
  */
 const renderOrdersWithAuth = (authContextValue) => {
   // Mock the useAuth hook to return our test values
-  const mockUseAuth = require("../../context/auth").useAuth;
+  const mockUseAuth = require("../../../context/auth").useAuth;
   mockUseAuth.mockReturnValue([authContextValue, jest.fn()]);
 
   return render(
@@ -282,8 +282,12 @@ describe("Orders Component Integration Tests", () => {
           "Warning: An update to Orders inside a test was not wrapped in act"
         ) ||
           args[0].includes(
-            'Warning: Each child in a list should have a unique "key" prop'
-          ))
+            "Warning: Each child in a list should have a unique"
+          ) ||
+          args[0].includes(
+            "Warning: ReactDOMTestUtils.hasClass is deprecated"
+          ) ||
+          args[0].includes("act(...)"))
       ) {
         return;
       }

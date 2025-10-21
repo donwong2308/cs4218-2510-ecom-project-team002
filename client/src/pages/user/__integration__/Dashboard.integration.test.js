@@ -2,6 +2,19 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Dashboard from "../Dashboard";
+import { AuthProvider } from "../../../context/auth";
+import axios from "axios";
+
+const renderDashboardWithProviders = (initialAuth = mockAuth) => {
+  localStorage.setItem("auth", JSON.stringify(initialAuth));
+  return render(
+    <BrowserRouter>
+      <AuthProvider>
+        <Dashboard />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
 
 // Mock external dependencies
 jest.mock("axios");
@@ -26,7 +39,6 @@ jest.mock("../../../components/UserMenu", () => {
   };
 });
 
-// Mock useAuth hook
 const mockAuth = {
   user: {
     name: "John Doe",
@@ -36,26 +48,16 @@ const mockAuth = {
   token: "mock-token",
 };
 
-jest.mock("../../../context/auth", () => ({
-  useAuth: () => [mockAuth],
-}));
-
 describe("Dashboard Integration Tests", () => {
-  const renderDashboard = () => {
-    return render(
-      <BrowserRouter>
-        <Dashboard />
-      </BrowserRouter>
-    );
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
+    axios.defaults = { headers: { common: {} } };
   });
 
   describe("Integration Test #1: Basic Component Rendering", () => {
     test("should render Dashboard component without crashing", () => {
-      renderDashboard();
+      renderDashboardWithProviders();
 
       // Component should render without throwing errors
       expect(screen.getByTestId("layout")).toBeInTheDocument();
@@ -64,7 +66,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #2: Page Title and Layout", () => {
     test("should render correct page title in Layout component", () => {
-      renderDashboard();
+      renderDashboardWithProviders();
 
       // Check if the title is passed correctly to Layout
       const titleElement = screen.getByText("Dashboard - Ecommerce App");
@@ -74,7 +76,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #3: UserMenu Integration", () => {
     test("should render UserMenu component", () => {
-      renderDashboard();
+      renderDashboardWithProviders();
 
       // Check if UserMenu is rendered
       const userMenu = screen.getByTestId("user-menu");
@@ -85,7 +87,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #4: User Data Display from Auth Context", () => {
     test("should display user information from auth context", () => {
-      renderDashboard();
+      renderDashboardWithProviders();
 
       // Check if user name is displayed
       expect(screen.getByText("John Doe")).toBeInTheDocument();
@@ -102,7 +104,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #5: Auth Context Integration", () => {
     test("should properly integrate with useAuth hook", () => {
-      renderDashboard();
+      renderDashboardWithProviders();
 
       // Verify that the auth context is being used properly
       const layout = screen.getByTestId("layout");
@@ -119,7 +121,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #6: User Information Card Structure", () => {
     test("should render user information in proper card structure", () => {
-      renderDashboard();
+      renderDashboardWithProviders();
 
       // Check that all user information headings are H3 elements
       const nameHeading = screen.getByRole("heading", { name: "John Doe" });
@@ -144,7 +146,7 @@ describe("Dashboard Integration Tests", () => {
   describe("Integration Test #7: Router Compatibility", () => {
     test("should work within React Router context", () => {
       // This test ensures the component doesn't break when rendered within BrowserRouter
-      expect(() => renderDashboard()).not.toThrow();
+      expect(() => renderDashboardWithProviders()).not.toThrow();
 
       // Verify component renders successfully in router context
       const layout = screen.getByTestId("layout");
@@ -159,7 +161,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #8: Component Integration Completeness", () => {
     test("should integrate all components seamlessly", () => {
-      renderDashboard();
+      renderDashboardWithProviders();
 
       // Verify Layout integrates with Dashboard
       const layout = screen.getByTestId("layout");
@@ -183,7 +185,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #9: Component Stability and Re-renders", () => {
     test("should render consistently and handle re-renders", () => {
-      const { rerender } = renderDashboard();
+      const { rerender } = renderDashboardWithProviders();
 
       // Verify initial render
       expect(screen.getByTestId("layout")).toBeInTheDocument();
@@ -192,7 +194,9 @@ describe("Dashboard Integration Tests", () => {
       // Test re-render with same props
       rerender(
         <BrowserRouter>
-          <Dashboard />
+          <AuthProvider>
+            <Dashboard />
+          </AuthProvider>
         </BrowserRouter>
       );
 
@@ -206,7 +210,7 @@ describe("Dashboard Integration Tests", () => {
 
   describe("Integration Test #10: Performance and Accessibility", () => {
     test("should render efficiently and maintain accessibility", () => {
-      const { unmount } = renderDashboard();
+      const { unmount } = renderDashboardWithProviders();
 
       // Verify initial state
       expect(screen.getByTestId("layout")).toBeInTheDocument();

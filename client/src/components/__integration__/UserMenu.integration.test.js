@@ -1,7 +1,37 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import UserMenu from "../UserMenu";
+import { MemoryRouter, Routes, Route, Outlet } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "../../context/auth";
+import Orders from "../../pages/user/Orders";
+jest.mock("axios");
+const mockedAxios = axios;
+jest.mock("../../context/auth", () => ({
+  useAuth: jest.fn(),
+}));
+jest.mock("../../components/Layout", () => ({ children }) => (
+  <div data-testid="layout-mock">{children}</div>
+));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  useAuth.mockReturnValue([
+    { token: "test-token", user: { name: "Alice" } },
+    jest.fn(),
+  ]);
+  localStorage.setItem(
+    "auth",
+    JSON.stringify({
+      user: { name: "Alice" },
+      token: "test-token",
+    })
+  );
+});
+afterEach(() => {
+  localStorage.clear();
+});
 
 describe("UserMenu Integration Tests", () => {
   const renderUserMenu = () => {
@@ -73,6 +103,70 @@ describe("UserMenu Integration Tests", () => {
       // Verify links are clickable (not disabled)
       expect(profileLink).not.toHaveAttribute("disabled");
       expect(ordersLink).not.toHaveAttribute("disabled");
+    });
+  });
+
+  describe("Integration Test #4b: NavLink Active State", () => {
+    test("should mark the matching route as active", () => {
+      render(
+        <MemoryRouter initialEntries={["/dashboard/user/orders"]}>
+          <UserMenu />
+        </MemoryRouter>
+      );
+
+      const profileLink = screen.getByRole("link", { name: "Profile" });
+      const ordersLink = screen.getByRole("link", { name: "Orders" });
+
+      expect(profileLink).not.toHaveClass("active");
+      expect(ordersLink).toHaveClass("active");
+    });
+  });
+
+  describe("Integration Test #4c: Orders navigation triggers data flow", () => {
+    test("should fetch orders when navigating from profile to orders", async () => {
+      mockedAxios.get.mockResolvedValueOnce({
+        data: [
+          {
+            _id: "order-1",
+            status: "Processing",
+            buyer: { name: "Alice" },
+            createAt: new Date().toISOString(),
+            payment: { success: true },
+            products: [],
+          },
+        ],
+      });
+
+      const DashboardShell = () => (
+        <div>
+          <UserMenu />
+          <div data-testid="content-area">
+            <Outlet />
+          </div>
+        </div>
+      );
+
+      render(
+        <MemoryRouter initialEntries={["/dashboard/user/profile"]}>
+          <Routes>
+            <Route path="/dashboard/user" element={<DashboardShell />}>
+              <Route
+                path="profile"
+                element={<div data-testid="profile-screen">Profile Screen</div>}
+              />
+              <Route path="orders" element={<Orders />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByRole("link", { name: "Orders" }));
+
+      expect(await screen.findByText("All Orders")).toBeInTheDocument();
+      expect(await screen.findByText("Processing")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(mockedAxios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      });
     });
   });
 
