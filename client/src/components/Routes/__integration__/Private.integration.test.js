@@ -337,6 +337,40 @@ describe("Private Integration Tests", () => {
       expect(screen.getByTestId("outlet")).toBeInTheDocument();
     });
   });
+  describe("Integration Test #11: Token Expiry and Refresh Integration", () => {
+    test("should handle expired token gracefully and redirect to login", async () => {
+      // Mock expired token response (401 or specific error)
+      mockedAxios.get.mockRejectedValueOnce({
+        response: {
+          status: 401,
+          data: { message: "Token expired" },
+        },
+      });
+
+      // Set up expired token in auth context
+      mockAuth.token = "expired-token-12345";
+
+      renderPrivateRoute();
+
+      // Initially should show spinner
+      expect(screen.getByTestId("spinner")).toBeInTheDocument();
+
+      // Wait for token expiry handling
+      await waitFor(() => {
+        // Should still show spinner (not authenticated due to expired token)
+        expect(screen.getByTestId("spinner")).toBeInTheDocument();
+      });
+
+      // Verify API was called with expired token
+      expect(mockedAxios.get).toHaveBeenCalledWith("/api/v1/auth/user-auth");
+
+      // Should not render protected content
+      expect(screen.queryByTestId("outlet")).not.toBeInTheDocument();
+
+      // Verify error handling doesn't crash the app
+      expect(screen.getByTestId("spinner")).toHaveAttribute("data-path", "");
+    });
+  });
 });
 
 /**

@@ -1264,6 +1264,166 @@ describe("AdminOrders Component Integration Tests", () => {
       expect(screen.getByText("2")).toBeInTheDocument();
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INTEGRATION TEST GROUP 6: PRODUCT DISPLAY INTEGRATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("Integration Test #6: Product Display Integration", () => {
+    /**
+     * TEST 6.1: Product Information Display Integration
+     * ─────────────────────────────────────────────────────────────────────────
+     * Integration Points:
+     * - AdminOrders → product data mapping → UI display
+     * - AdminOrders → product image API → image rendering
+     * - AdminOrders → product description → text truncation
+     *
+     * Expected Flow:
+     * 1. Order data contains product array
+     * 2. Each product renders with image, name, description, price
+     * 3. Product images use correct API endpoint
+     * 4. Product descriptions are truncated to 30 characters
+     * 5. Product prices display with "Price : " prefix
+     */
+    it("should integrate product information display with correct data formatting", async () => {
+      // ═══════════════════════════════════════════════════════════════
+      // ARRANGE: Setup test data and authentication
+      // ═══════════════════════════════════════════════════════════════
+
+      const authContext = createAdminAuthenticatedContext();
+
+      const orderWithMultipleProducts = {
+        _id: "order123",
+        status: "Processing",
+        buyer: { name: "John Doe" },
+        createAt: "2024-01-15T10:00:00Z",
+        payment: { success: true },
+        products: [
+          {
+            _id: "prod1",
+            name: "Wireless Bluetooth Headphones",
+            description:
+              "High-quality wireless headphones with noise cancellation and long battery life",
+            price: 149.99,
+          },
+          {
+            _id: "prod2",
+            name: "Smartphone Case",
+            description:
+              "Durable protective case for smartphones with shock absorption",
+            price: 24.99,
+          },
+        ],
+      };
+
+      mockedAxios.get.mockResolvedValueOnce({
+        data: [orderWithMultipleProducts],
+      });
+
+      // ═══════════════════════════════════════════════════════════════
+      // ACT: Render component and wait for data
+      // ═══════════════════════════════════════════════════════════════
+
+      renderAdminOrdersWithAuth(authContext);
+
+      // Wait for products to load
+      await waitFor(() => {
+        expect(
+          screen.getByText("Wireless Bluetooth Headphones")
+        ).toBeInTheDocument();
+      });
+
+      // ═══════════════════════════════════════════════════════════════
+      // ASSERT: Verify product display integration
+      // ═══════════════════════════════════════════════════════════════
+
+      // ───────────────────────────────────────────────────────────────
+      // VERIFICATION #1: Product names display correctly
+      // ───────────────────────────────────────────────────────────────
+      expect(
+        screen.getByText("Wireless Bluetooth Headphones")
+      ).toBeInTheDocument();
+      expect(screen.getByText("Smartphone Case")).toBeInTheDocument();
+
+      // ───────────────────────────────────────────────────────────────
+      // VERIFICATION #2: Product descriptions are truncated to 30 chars
+      // ───────────────────────────────────────────────────────────────
+      expect(
+        screen.getByText("High-quality wireless headphon")
+      ).toBeInTheDocument(); // Truncated to 30 chars
+      expect(
+        screen.getByText("Durable protective case for sm")
+      ).toBeInTheDocument(); // Truncated to 30 chars
+
+      // ───────────────────────────────────────────────────────────────
+      // VERIFICATION #3: Product prices display with correct format
+      // ───────────────────────────────────────────────────────────────
+      const priceLabels = screen.getAllByText("Price :", { exact: false });
+      expect(priceLabels).toHaveLength(2);
+
+      // Use more flexible text matching for prices - expect at least one element containing each price
+      const priceElements149 = screen.getAllByText((content, element) => {
+        return element?.textContent?.includes("149.99") || false;
+      });
+      expect(priceElements149.length).toBeGreaterThan(0);
+
+      const priceElements24 = screen.getAllByText((content, element) => {
+        return element?.textContent?.includes("24.99") || false;
+      });
+      expect(priceElements24.length).toBeGreaterThan(0);
+
+      // ───────────────────────────────────────────────────────────────
+      // VERIFICATION #4: Product images use correct API endpoints
+      // ───────────────────────────────────────────────────────────────
+      const productImages = screen.getAllByRole("img");
+      expect(productImages).toHaveLength(2);
+
+      expect(productImages[0]).toHaveAttribute(
+        "src",
+        "/api/v1/product/product-photo/prod1"
+      );
+      expect(productImages[0]).toHaveAttribute(
+        "alt",
+        "Wireless Bluetooth Headphones"
+      );
+      expect(productImages[0]).toHaveAttribute("width", "100px");
+      expect(productImages[0]).toHaveAttribute("height", "100px");
+
+      expect(productImages[1]).toHaveAttribute(
+        "src",
+        "/api/v1/product/product-photo/prod2"
+      );
+      expect(productImages[1]).toHaveAttribute("alt", "Smartphone Case");
+      expect(productImages[1]).toHaveAttribute("width", "100px");
+      expect(productImages[1]).toHaveAttribute("height", "100px");
+
+      // ───────────────────────────────────────────────────────────────
+      // VERIFICATION #5: Verify complete product display structure
+      // ───────────────────────────────────────────────────────────────
+      // All product information should be visible in the same container
+      expect(
+        screen.getByText("Wireless Bluetooth Headphones")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("High-quality wireless headphon")
+      ).toBeInTheDocument();
+
+      const finalPriceElements149 = screen.getAllByText((content, element) => {
+        return element?.textContent?.includes("149.99") || false;
+      });
+      expect(finalPriceElements149.length).toBeGreaterThan(0);
+
+      expect(screen.getByText("Smartphone Case")).toBeInTheDocument();
+      expect(
+        screen.getByText("Durable protective case for sm")
+      ).toBeInTheDocument();
+
+      const finalPriceElements24 = screen.getAllByText((content, element) => {
+        return element?.textContent?.includes("24.99") || false;
+      });
+      expect(finalPriceElements24.length).toBeGreaterThan(0);
+    });
+  });
 });
 
 /**

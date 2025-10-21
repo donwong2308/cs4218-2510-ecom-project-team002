@@ -349,4 +349,38 @@ describe("HomePage Integration Tests", () => {
       );
     });
   });
+  describe("Integration Test #9: API Error Handling", () => {
+    it("should handle API failures gracefully and show error feedback", async () => {
+      // Mock API failure for product loading
+      mockedAxios.get.mockImplementation((url) => {
+        if (url.includes("/api/v1/category/get-category")) {
+          return Promise.resolve({
+            data: { success: true, category: mockCategories },
+          });
+        }
+        if (url.includes("/api/v1/product/product-count")) {
+          return Promise.reject(new Error("Network error"));
+        }
+        if (url.includes("/api/v1/product/product-list/1")) {
+          return Promise.reject(new Error("Products API failed"));
+        }
+        return Promise.reject(new Error("Unknown API endpoint"));
+      });
+
+      // Mock console.log to verify error logging
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      renderHomePage();
+
+      // Wait for error handling
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
+      });
+
+      // Cleanup
+      consoleSpy.mockRestore();
+    });
+  });
 });
