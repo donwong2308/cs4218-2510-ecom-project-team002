@@ -3,9 +3,9 @@ import colors from "colors";
 import dotenv from "dotenv";
 import morgan from "morgan";
 import connectDB from "./config/db.js";
-import authRoutes from './routes/authRoute.js'
-import categoryRoutes from './routes/categoryRoutes.js'
-import productRoutes from './routes/productRoutes.js'
+import authRoutes from "./routes/authRoute.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
 import cors from "cors";
 import path from "path";
 
@@ -21,8 +21,15 @@ app.use("/images", express.static(path.join(__dirname, "client", "public", "imag
 
 //middlewares
 app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(morgan("dev"));
+
+// Increase header size limits
+app.use((req, res, next) => {
+  req.maxHeadersCount = 0;
+  next();
+});
 
 //routes
 app.use("/api/v1/auth", authRoutes);
@@ -31,12 +38,14 @@ app.use("/api/v1/product", productRoutes);
 
 // rest api
 
-app.get('/', (req,res) => {
-    res.send("<h1>Welcome to ecommerce app</h1>");
+app.get("/", (req, res) => {
+  res.send("<h1>Welcome to ecommerce app</h1>");
 });
 
 const PORT = process.env.PORT || 6060;
 
 app.listen(PORT, () => {
-    console.log(`Server running on ${process.env.DEV_MODE} mode on ${PORT}`.bgCyan.white);
+  console.log(
+    `Server running on ${process.env.DEV_MODE} mode on ${PORT}`.bgCyan.white
+  );
 });

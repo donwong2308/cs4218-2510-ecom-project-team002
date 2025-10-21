@@ -28,13 +28,14 @@ export default {
     "client/src/**/*.js",
     "!client/src/_site/**", // Exclude auto-generated files
     "!client/src/index.js",
-    "!client/src/reportWebVitals.js", 
-    "!client/src/setupTests.js"
+    "!client/src/reportWebVitals.js",
+    "!client/src/setupTests.js",
   ],
   coverageThreshold: {
     global: {
       lines: 80,
       functions: 80,
+      branches: 80,
     },
   },
   setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],

@@ -6,7 +6,6 @@ import Layout from "../../components/Layout";
 import { useAuth } from "../../context/auth";
 import moment from "moment";
 import { Select } from "antd";
-const { Option } = Select;
 
 const AdminOrders = () => {
   const [status, setStatus] = useState([
@@ -52,7 +51,7 @@ const AdminOrders = () => {
           <h1 className="text-center">All Orders</h1>
           {orders?.map((o, i) => {
             return (
-              <div className="border shadow">
+              <div className="border shadow" key={o._id}>
                 <table className="table">
                   <thead>
                     <tr>
@@ -72,13 +71,12 @@ const AdminOrders = () => {
                           bordered={false}
                           onChange={(value) => handleChange(o._id, value)}
                           defaultValue={o?.status}
-                        >
-                          {status.map((s, i) => (
-                            <Option key={i} value={s}>
-                              {s}
-                            </Option>
-                          ))}
-                        </Select>
+                          options={status.map((s, i) => ({
+                            key: i,
+                            value: s,
+                            label: s,
+                          }))}
+                        />
                       </td>
                       <td>{o?.buyer?.name}</td>
                       <td>{moment(o?.createAt).fromNow()}</td>

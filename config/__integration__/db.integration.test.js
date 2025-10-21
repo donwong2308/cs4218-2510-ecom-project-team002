@@ -8,14 +8,14 @@
 /**
  * @jest-environment node
  */
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
 
 // Adjust the import paths to your project structure:
-import connectDB from '../../config/db.js';
-import categoryModel from '../../models/categoryModel.js';
+import connectDB from "../../config/db.js";
+import categoryModel from "../../models/categoryModel.js";
 
-describe('E2E Integration: connectDB wiring + Category model (in-memory MongoDB)', () => {
+describe("E2E Integration: connectDB wiring + Category model (in-memory MongoDB)", () => {
   let mongo;
   const originalEnv = process.env;
   let consoleLogSpy;
@@ -29,7 +29,7 @@ describe('E2E Integration: connectDB wiring + Category model (in-memory MongoDB)
     process.env = { ...originalEnv, MONGO_URL: uri };
 
     // spy on console.log to verify boot message (
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
     // call your real connectDB (no mocks)
     await connectDB();
@@ -61,43 +61,45 @@ describe('E2E Integration: connectDB wiring + Category model (in-memory MongoDB)
     }
   });
 
-  it('connectDB reads MONGO_URL and logs success once connected', async () => {
-
+  it("connectDB reads MONGO_URL and logs success once connected", async () => {
     expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('Connected To Mongodb Database')
+      expect.stringContaining("Connected To Mongodb Database")
     );
 
     const { host } = mongoose.connection;
     expect(host).toBeTruthy(); // host string from the active connection
   });
 
-  it('persists & retrieves Category; slug normalization is enforced by the schema', async () => {
+  it("persists & retrieves Category; slug normalization is enforced by the schema", async () => {
     const created = await categoryModel.create({
-      name: 'Wearables',
-      slug: 'WeArAbLeS',
+      name: "Wearables",
+      slug: "WeArAbLeS",
     });
 
     expect(created._id).toBeDefined();
-    expect(created.slug).toBe('wearables');
+    expect(created.slug).toBe("wearables");
 
-    const fetched = await categoryModel.findOne({ name: 'Wearables' }).lean();
+    const fetched = await categoryModel.findOne({ name: "Wearables" }).lean();
     expect(fetched).not.toBeNull();
-    expect(fetched.slug).toBe('wearables');
+    expect(fetched.slug).toBe("wearables");
   });
 
-  it('enforces validation / unique constraints (if defined on schema)', async () => {
+  it("enforces validation / unique constraints (if defined on schema)", async () => {
     // This test only triggers if your schema has a unique index on name or slug.
-    
-    
-    await categoryModel.create({ name: 'Gadgets', slug: 'gadgets' });
+    // Ensure indexes are created before testing unique constraints
+    await categoryModel.init();
+
+    await categoryModel.create({ name: "Gadgets", slug: "gadgets" });
 
     let threw = false;
     try {
-      await categoryModel.create({ name: 'Gadgets', slug: 'gadgets-dup' });
+      await categoryModel.create({ name: "Gadgets", slug: "gadgets-dup" });
     } catch (err) {
       threw = true;
       // Mongo duplicate key error code:
-      expect(err?.code === 11000 || /duplicate key/i.test(err?.message)).toBe(true);
+      expect(err?.code === 11000 || /duplicate key/i.test(err?.message)).toBe(
+        true
+      );
     }
     // If your schema isn't unique, replace this with a validator test instead.
     expect(threw).toBe(true);
