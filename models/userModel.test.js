@@ -21,6 +21,8 @@ describe("User Model Integration Tests", () => {
     mongoServer = await MongoMemoryServer.create();
     mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
+    // Ensure indexes are created for unique constraints
+    await User.init();
   });
 
   afterAll(async () => {
