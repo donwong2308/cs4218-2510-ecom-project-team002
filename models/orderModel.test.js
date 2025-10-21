@@ -1,130 +1,91 @@
-import fs from "fs";
 import mongoose from "mongoose";
-
-// Mock mongoose before importing the model
-jest.mock("mongoose", () => {
-  const mockSchema = jest.fn().mockImplementation(() => ({
-    paths: {
-      products: {
-        instance: "Array",
-        options: {
-          type: [{ type: "ObjectId", ref: "Products" }],
-        },
-        isRequired: false,
-      },
-      payment: {
-        instance: "Mixed",
-        options: { type: {} },
-        isRequired: false,
-      },
-      buyer: {
-        instance: "ObjectID",
-        options: {
-          type: "ObjectId",
-          ref: "users",
-        },
-        isRequired: false,
-      },
-      status: {
-        instance: "String",
-        options: {
-          type: String,
-          default: "Not Process",
-          enum: ["Not Process", "Processing", "Shipped", "deliverd", "cancel"],
-        },
-        isRequired: false,
-      },
-    },
-    add: jest.fn(),
-    method: jest.fn(),
-    static: jest.fn(),
-  }));
-
-  const mockModel = jest.fn().mockReturnValue({
-    find: jest.fn(),
-    findOne: jest.fn(),
-    create: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn(),
-    populate: jest.fn(),
-    modelName: "Order",
-    schema: {},
-  });
-
-  // Create a mock ObjectId
-  const mockObjectId = jest.fn();
-  mockObjectId.toString = jest.fn().mockReturnValue("mockObjectId");
-
-  return {
-    Schema: mockSchema,
-    model: mockModel,
-    ObjectId: mockObjectId,
-  };
-});
-
-// Import the model after mocking
+import { MongoMemoryServer } from "mongodb-memory-server";
 import orderModel from "./orderModel.js";
 
+let mongoServer;
+
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  await mongoose.connect(mongoServer.getUri());
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+beforeEach(async () => {
+  await orderModel.deleteMany({});
+});
+
 describe("Order Model", () => {
-  let fileContent;
-
-  beforeAll(() => {
-    // Read the orderModel.js file
-    fileContent = fs.readFileSync("./models/orderModel.js", "utf8");
-  });
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test("should export mongoose model", () => {
-    expect(orderModel).toBeDefined();
-    expect(typeof orderModel).toBe("object");
-  });
-
-  describe("Schema Field Definitions", () => {
-    test("schema has the correct products field definition", () => {
-      // Check for products field with array of ObjectId references
-      expect(fileContent).toMatch(
-        /products:\s*\[\s*{\s*type:\s*mongoose\.ObjectId,\s*ref:\s*["']Products["'],?\s*},?\s*\]/
-      );
+  //
+  // Model Creation & Field Defaults
+  //
+  describe("Model Creation & Field Defaults", () => {
+    test("creates new order with default status value", async () => {
+      const newOrder = await orderModel.create({});
+      expect(newOrder.status).toMatch("Not Process");
     });
 
-    test("schema has the correct payment field definition", () => {
-      // Check for payment field as empty object
-      expect(fileContent).toMatch(/payment:\s*{}/);
+    test("creates order with specified processing status", async () => {
+      const processingOrder = await orderModel.create({ status: "Processing" });
+      expect(processingOrder.status).toMatch("Processing");
     });
 
-    test("schema has the correct buyer field definition", () => {
-      // Check for buyer field with ObjectId reference to users
-      expect(fileContent).toMatch(
-        /buyer:\s*{\s*type:\s*mongoose\.ObjectId,\s*ref:\s*["']users["'],?\s*}/
-      );
+    test("prevents creation with non-enumerated status", async () => {
+      const invalidCreation = orderModel.create({ status: "InvalidStatus" });
+      await expect(invalidCreation).rejects.toThrow();
     });
 
-    test("schema has the correct status field definition", () => {
-      // Check for status field with String type, default value, and enum
-      expect(fileContent).toMatch(/status:\s*{\s*type:\s*String,/);
-      expect(fileContent).toMatch(/default:\s*["']Not Process["']/);
-      expect(fileContent).toMatch(
-        /enum:\s*\[\s*["']Not Process["'],\s*["']Processing["'],\s*["']Shipped["'],\s*["']deliverd["'],\s*["']cancel["']\s*\]/
-      );
+    test("handles empty product collection", async () => {
+      const orderWithEmptyProducts = await orderModel.create({ products: [] });
+      expect(orderWithEmptyProducts.products).toHaveLength(0);
+    });
+
+    test("stores single product reference", async () => {
+      const singleProductOrder = await orderModel.create({
+        products: [new mongoose.Types.ObjectId()],
+      });
+      expect(singleProductOrder.products).toHaveLength(1);
+    });
+
+    test("validates ObjectId format in product references", async () => {
+      const invalidProductCreation = orderModel.create({
+        products: ["invalid-objectid"],
+      });
+      await expect(invalidProductCreation).rejects.toThrow();
     });
   });
 
-  describe("Schema Configuration", () => {
-    test("schema has timestamps enabled", () => {
-      expect(fileContent).toMatch(/{\s*timestamps:\s*true\s*}/);
+  //
+  // Order Field Behavior Testing
+  //
+  describe("Order Field Behavior Testing", () => {
+    test("automatically assigns timestamp fields on creation", async () => {
+      const timestampedOrder = await orderModel.create({});
+      expect(timestampedOrder.createdAt).toBeTruthy();
+      expect(timestampedOrder.updatedAt).toBeTruthy();
     });
 
-    test('model is named "Order"', () => {
-      expect(fileContent).toMatch(/mongoose\.model\(\s*["']Order["']/);
+    test("maintains payment data structure integrity", async () => {
+      const paymentOrder = await orderModel.create({
+        payment: { method: "card", amount: 200 },
+      });
+      expect(paymentOrder.payment).toMatchObject({
+        method: "card",
+        amount: 200,
+      });
     });
-  });
 
-  describe("Status Enum Values", () => {
-    test("status enum contains all expected values", () => {
-      const expectedStatuses = [
+    test("correctly assigns buyer reference field", async () => {
+      const customerRef = new mongoose.Types.ObjectId();
+      const customerOrder = await orderModel.create({ buyer: customerRef });
+      expect(customerOrder.buyer).toStrictEqual(customerRef);
+    });
+
+    test("verifies all permitted status enum values", async () => {
+      const allowedStatuses = [
         "Not Process",
         "Processing",
         "Shipped",
@@ -132,71 +93,154 @@ describe("Order Model", () => {
         "cancel",
       ];
 
-      expectedStatuses.forEach((status) => {
-        expect(fileContent).toMatch(new RegExp(`["']${status}["']`));
+      for (const statusValue of allowedStatuses) {
+        const statusOrder = await orderModel.create({ status: statusValue });
+        expect(statusOrder.status).toEqual(statusValue);
+      }
+    });
+
+    test("handles multiple product references in array", async () => {
+      const multipleProductRefs = [
+        new mongoose.Types.ObjectId(),
+        new mongoose.Types.ObjectId(),
+        new mongoose.Types.ObjectId(),
+      ];
+
+      const multiProductOrder = await orderModel.create({
+        products: multipleProductRefs,
       });
-    });
-
-    test('default status is "Not Process"', () => {
-      expect(fileContent).toMatch(/default:\s*["']Not Process["']/);
-    });
-  });
-
-  describe("Field References", () => {
-    test('products field references "Products" model', () => {
-      expect(fileContent).toMatch(/ref:\s*["']Products["']/);
-    });
-
-    test('buyer field references "users" model', () => {
-      expect(fileContent).toMatch(/ref:\s*["']users["']/);
+      expect(multiProductOrder.products).toHaveLength(3);
+      expect(multiProductOrder.products[0]).toEqual(multipleProductRefs[0]);
+      expect(multiProductOrder.products[1]).toEqual(multipleProductRefs[1]);
+      expect(multiProductOrder.products[2]).toEqual(multipleProductRefs[2]);
     });
   });
 
-  describe("Field Types", () => {
-    test("products field is an array of ObjectIds", () => {
-      expect(fileContent).toMatch(
-        /products:\s*\[\s*{\s*type:\s*mongoose\.ObjectId/
-      );
+  //
+  // Input Validation & Error Cases
+  //
+  describe("Input Validation & Error Cases", () => {
+    test("throws error when buyer contains invalid ObjectId", async () => {
+      const invalidBuyerCreation = orderModel.create({ buyer: "invalid-id" });
+      await expect(invalidBuyerCreation).rejects.toThrow();
     });
 
-    test("buyer field is an ObjectId", () => {
-      expect(fileContent).toMatch(/buyer:\s*{\s*type:\s*mongoose\.ObjectId/);
-    });
-
-    test("payment field is an object type", () => {
-      expect(fileContent).toMatch(/payment:\s*{}/);
-    });
-
-    test("status field is a String type", () => {
-      expect(fileContent).toMatch(/status:\s*{\s*type:\s*String/);
-    });
-  });
-
-  describe("Model Export", () => {
-    test("exports default mongoose model", () => {
-      expect(fileContent).toMatch(/export\s+default\s+mongoose\.model/);
-    });
-
-    test("model export uses correct schema and name", () => {
-      expect(fileContent).toMatch(
-        /mongoose\.model\(\s*["']Order["'],\s*orderSchema\s*\)/
-      );
-    });
-  });
-
-  describe("Schema Structure Validation", () => {
-    test("schema is properly defined with new mongoose.Schema", () => {
-      expect(fileContent).toMatch(
-        /const\s+orderSchema\s*=\s*new\s+mongoose\.Schema/
-      );
-    });
-
-    test("schema contains all required fields", () => {
-      const requiredFields = ["products", "payment", "buyer", "status"];
-
-      requiredFields.forEach((field) => {
-        expect(fileContent).toMatch(new RegExp(`${field}:`));
+    test("rejects mixed invalid ObjectId in products collection", async () => {
+      const mixedInvalidCreation = orderModel.create({
+        products: [new mongoose.Types.ObjectId(), "invalid-id"],
       });
+      await expect(mixedInvalidCreation).rejects.toThrow();
+    });
+
+    test("blocks non-enum status values", async () => {
+      const badStatusCreation = orderModel.create({ status: "Pending" });
+      await expect(badStatusCreation).rejects.toThrow();
+    });
+
+    test("prevents non-array product field assignment", async () => {
+      const nonArrayCreation = orderModel.create({ products: "not-an-array" });
+      await expect(nonArrayCreation).rejects.toThrow();
+    });
+  });
+
+  //
+  // Payment Data Structure Tests
+  //
+  describe("Payment Data Structure Tests", () => {
+    test("accepts empty payment object without issues", async () => {
+      const emptyPaymentOrder = await orderModel.create({ payment: {} });
+      expect(emptyPaymentOrder.payment).toEqual({});
+    });
+
+    test("stores complex payment information correctly", async () => {
+      const detailedPaymentInfo = {
+        method: "credit_card",
+        amount: 150.75,
+        currency: "USD",
+        transactionId: "txn_123456",
+        gateway: "stripe",
+      };
+
+      const complexPaymentOrder = await orderModel.create({
+        payment: detailedPaymentInfo,
+      });
+      expect(complexPaymentOrder.payment).toEqual(detailedPaymentInfo);
+    });
+
+    test("handles nested payment object structures", async () => {
+      const nestedPaymentOrder = await orderModel.create({
+        payment: { nested: { deep: { value: "test" } } },
+      });
+      expect(nestedPaymentOrder.payment.nested.deep.value).toBe("test");
+    });
+
+    test("allows null payment values", async () => {
+      const nullPaymentOrder = await orderModel.create({ payment: null });
+      expect(nullPaymentOrder.payment).toBeNull();
+    });
+  });
+
+  //
+  // Model Reference Testing
+  //
+  describe("Model Reference Testing", () => {
+    test("validates product model reference linkage", async () => {
+      const productReference = new mongoose.Types.ObjectId();
+      const productLinkedOrder = await orderModel.create({
+        products: [productReference],
+      });
+
+      // Verify reference storage integrity
+      expect(productLinkedOrder.products[0]).toEqual(productReference);
+      expect(
+        mongoose.Types.ObjectId.isValid(productLinkedOrder.products[0])
+      ).toBe(true);
+    });
+
+    test("confirms buyer user model reference", async () => {
+      const userReference = new mongoose.Types.ObjectId();
+      const userLinkedOrder = await orderModel.create({ buyer: userReference });
+
+      // Verify buyer reference storage
+      expect(userLinkedOrder.buyer).toEqual(userReference);
+      expect(mongoose.Types.ObjectId.isValid(userLinkedOrder.buyer)).toBe(true);
+    });
+
+    test("permits undefined buyer field", async () => {
+      const noBuyerOrder = await orderModel.create({});
+      expect(noBuyerOrder.buyer).toBeUndefined();
+    });
+
+    test("permits empty products collection", async () => {
+      const noProductsOrder = await orderModel.create({ products: [] });
+      expect(noProductsOrder.products).toEqual([]);
+    });
+  });
+
+  //
+  // Timestamp Behavior Testing
+  //
+  describe("Timestamp Behavior Testing", () => {
+    test("initializes createdAt and updatedAt timestamps", async () => {
+      const timestampOrder = await orderModel.create({});
+
+      expect(timestampOrder.createdAt).toBeInstanceOf(Date);
+      expect(timestampOrder.updatedAt).toBeInstanceOf(Date);
+      expect(timestampOrder.createdAt).toEqual(timestampOrder.updatedAt);
+    });
+
+    test("updates timestamp when order is modified", async () => {
+      const modifiableOrder = await orderModel.create({});
+      const originalUpdatedAt = modifiableOrder.updatedAt;
+
+      // Wait briefly to ensure timestamp difference
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      modifiableOrder.status = "Processing";
+      await modifiableOrder.save();
+
+      expect(modifiableOrder.updatedAt).not.toEqual(originalUpdatedAt);
+      expect(modifiableOrder.updatedAt > originalUpdatedAt).toBe(true);
     });
   });
 });
