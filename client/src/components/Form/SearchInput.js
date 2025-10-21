@@ -8,6 +8,14 @@ const SearchInput = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Handle empty search - don't make API call, just navigate with empty results
+    if (!values.keyword || values.keyword.trim() === '') {
+      setValues({ ...values, results: [] });
+      navigate("/search");
+      return;
+    }
+    
     try {
       const { data } = await axios.get(
         `/api/v1/product/search/${values.keyword}`

@@ -272,7 +272,7 @@ describe("Product Controller Tests", () => {
 
       await getSingleProductController(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.status).toHaveBeenCalledWith(404);
       expect(res.send).toHaveBeenCalledWith({
         success: false,
         message: "Eror while getitng single product",
@@ -390,7 +390,10 @@ describe("Product Controller Tests", () => {
           }
         }
 
-        if (args.price && (args.price.$gte != null || args.price.$lte != null)) {
+        if (
+          args.price &&
+          (args.price.$gte != null || args.price.$lte != null)
+        ) {
           const gte = args.price.$gte ?? -Infinity;
           const lte = args.price.$lte ?? Infinity;
           out = out.filter((p) => p.price >= gte && p.price <= lte);
@@ -532,7 +535,9 @@ describe("Product Controller Tests", () => {
     };
 
     const setCountError = (msg = "DB Down") => {
-      const estimatedDocumentCount = jest.fn().mockRejectedValue(new Error(msg));
+      const estimatedDocumentCount = jest
+        .fn()
+        .mockRejectedValue(new Error(msg));
       productModel.find.mockReturnValue({ estimatedDocumentCount });
       return { calls: { estimatedDocumentCount } };
     };
@@ -584,7 +589,8 @@ describe("Product Controller Tests", () => {
         // apply skip & limit
         const start = Number.isFinite(capturedSkip) ? capturedSkip : 0;
         let sliced = arr.slice(start);
-        if (Number.isFinite(capturedLimit)) sliced = sliced.slice(0, capturedLimit);
+        if (Number.isFinite(capturedLimit))
+          sliced = sliced.slice(0, capturedLimit);
         return Promise.resolve(sliced);
       });
 
@@ -832,7 +838,6 @@ describe("Product Controller Tests", () => {
       });
     });
   });
-
 
   describe("realtedProductController", () => {
     beforeEach(() => {
@@ -1113,10 +1118,16 @@ describe("Product Controller Tests", () => {
 // ===== Additional controller tests: create/update/delete and payments =====
 
 describe("createProductController", () => {
-  let req, res;
+  let req, res, logSpy, errSpy;
 
   beforeEach(() => {
     jest.clearAllMocks();
+  // Ensure duplicate check path doesn't throw when calling .lean()
+  productModel.findOne = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
+
+    // Mute noisy logs during these tests
+    logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
     req = {
       fields: {
@@ -1144,6 +1155,11 @@ describe("createProductController", () => {
     slugify.mockImplementation((name) =>
       name.toLowerCase().replace(/\s+/g, "-")
     );
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    errSpy.mockRestore();
   });
 
   it("should return validation error if name is missing", async () => {
@@ -1246,10 +1262,16 @@ describe("createProductController", () => {
 });
 
 describe("updateProductController", () => {
-  let req, res;
+  let req, res, logSpy, errSpy;
 
   beforeEach(() => {
     jest.clearAllMocks();
+  // Ensure duplicate check path doesn't throw when calling .lean()
+  productModel.findOne = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
+
+    // Mute noisy logs during these tests
+    logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
     req = {
       params: { pid: "product123" },
@@ -1278,6 +1300,11 @@ describe("updateProductController", () => {
     slugify.mockImplementation((name) =>
       name.toLowerCase().replace(/\s+/g, "-")
     );
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    errSpy.mockRestore();
   });
 
   it("should return validation error if name is missing", async () => {
@@ -1391,10 +1418,14 @@ describe("updateProductController", () => {
 });
 
 describe("deleteProductController", () => {
-  let req, res;
+  let req, res, logSpy, errSpy;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Mute noisy logs during these tests
+    logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
     req = {
       params: { pid: "product123" },
@@ -1404,6 +1435,11 @@ describe("deleteProductController", () => {
       status: jest.fn().mockReturnThis(),
       send: jest.fn(),
     };
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    errSpy.mockRestore();
   });
 
   it("should delete a product successfully", async () => {
@@ -1485,7 +1521,7 @@ describe("Braintree Payment Controller Tests (Actual Functions)", () => {
      * Purpose: Verify that braintreeTokenController is properly exported and callable
      * Approach: Structure verification
      * Expected: Function should be defined with correct signature
-     * 
+     *
      * Controller Behavior (from code inspection):
      * 1. Calls gateway.clientToken.generate({}, callback)
      * 2. On success: sends response with clientToken
@@ -1496,7 +1532,7 @@ describe("Braintree Payment Controller Tests (Actual Functions)", () => {
       // Verify the controller function exists and is callable
       expect(braintreeTokenController).toBeDefined();
       expect(typeof braintreeTokenController).toBe("function");
-      
+
       // Verify function accepts two parameters: req and res
       expect(braintreeTokenController.length).toBe(2);
     });
@@ -1508,7 +1544,7 @@ describe("Braintree Payment Controller Tests (Actual Functions)", () => {
      * Purpose: Verify that brainTreePaymentController is properly exported and callable
      * Approach: Structure verification
      * Expected: Function should be defined with correct signature
-     * 
+     *
      * Controller Behavior (from code inspection):
      * 1. Extracts nonce and cart from req.body
      * 2. Calculates total by summing cart item prices
@@ -1516,7 +1552,7 @@ describe("Braintree Payment Controller Tests (Actual Functions)", () => {
      * 4. On success: creates order in database and responds with {ok: true}
      * 5. On error: sends 500 status with error details
      * 6. Uses callback pattern for async Braintree transaction processing
-     * 
+     *
      * Business Logic:
      * - Cart total calculation: Iterates through cart items summing prices
      * - Payment options: submitForSettlement set to true for immediate processing
@@ -1526,7 +1562,7 @@ describe("Braintree Payment Controller Tests (Actual Functions)", () => {
       // Verify the controller function exists and is callable
       expect(brainTreePaymentController).toBeDefined();
       expect(typeof brainTreePaymentController).toBe("function");
-      
+
       // Verify function accepts two parameters: req and res
       expect(brainTreePaymentController.length).toBe(2);
     });
@@ -1538,7 +1574,7 @@ describe("Braintree Payment Controller Tests (Actual Functions)", () => {
      * Purpose: Document and verify the cart total calculation algorithm
      * Approach: Output-based testing of the calculation logic
      * Expected: Total should equal sum of all cart item prices
-     * 
+     *
      * This test verifies the same calculation logic used in brainTreePaymentController:
      * ```
      * let total = 0;

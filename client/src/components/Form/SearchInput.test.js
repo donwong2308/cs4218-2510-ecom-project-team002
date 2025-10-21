@@ -178,8 +178,6 @@ describe('SearchInput Component', () => {
   });
 
   test('should handle empty search keyword', async () => {
-    axios.get.mockResolvedValueOnce({ data: [] });
-
     require('../../context/search').useSearch.mockReturnValue([{
       keyword: '',
       results: []
@@ -191,11 +189,36 @@ describe('SearchInput Component', () => {
     fireEvent.submit(form);
     
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith('/api/v1/product/search/');
+      // Empty search should NOT make an API call
+      expect(axios.get).not.toHaveBeenCalled();
     });
     
     expect(mockSetValues).toHaveBeenCalledWith({
       keyword: '',
+      results: []
+    });
+    
+    expect(mockNavigate).toHaveBeenCalledWith('/search');
+  });
+
+  test('should handle whitespace-only search keyword', async () => {
+    require('../../context/search').useSearch.mockReturnValue([{
+      keyword: '   ',
+      results: []
+    }, mockSetValues]);
+
+    renderWithRouter(<SearchInput />);
+    
+    const form = screen.getByRole('search');
+    fireEvent.submit(form);
+    
+    await waitFor(() => {
+      // Whitespace-only search should NOT make an API call
+      expect(axios.get).not.toHaveBeenCalled();
+    });
+    
+    expect(mockSetValues).toHaveBeenCalledWith({
+      keyword: '   ',
       results: []
     });
     

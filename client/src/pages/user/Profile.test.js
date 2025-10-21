@@ -56,17 +56,18 @@ describe("Profile page", () => {
     axios.put.mockResolvedValueOnce({ data: { updatedUser } });
 
   render(<Profile />);
+  const user = userEvent.setup();
 
   // change some fields
-  userEvent.clear(screen.getByPlaceholderText(/Enter Your Name/i));
-  userEvent.type(screen.getByPlaceholderText(/Enter Your Name/i), updatedUser.name);
-  userEvent.clear(screen.getByPlaceholderText(/Enter Your Phone/i));
-  userEvent.type(screen.getByPlaceholderText(/Enter Your Phone/i), updatedUser.phone);
-  userEvent.clear(screen.getByPlaceholderText(/Enter Your Address/i));
-  userEvent.type(screen.getByPlaceholderText(/Enter Your Address/i), updatedUser.address);
+  await user.clear(screen.getByPlaceholderText(/Enter Your Name/i));
+  await user.type(screen.getByPlaceholderText(/Enter Your Name/i), updatedUser.name);
+  await user.clear(screen.getByPlaceholderText(/Enter Your Phone/i));
+  await user.type(screen.getByPlaceholderText(/Enter Your Phone/i), updatedUser.phone);
+  await user.clear(screen.getByPlaceholderText(/Enter Your Address/i));
+  await user.type(screen.getByPlaceholderText(/Enter Your Address/i), updatedUser.address);
 
   // submit
-  userEvent.click(screen.getByRole("button", { name: /update/i }));
+  await user.click(screen.getByRole("button", { name: /update/i }));
 
     await waitFor(() => {
       // setAuth should be called with updated user
@@ -82,8 +83,9 @@ describe("Profile page", () => {
     axios.put.mockResolvedValueOnce({ data: { errro: true, error: "Server failure" } });
 
   render(<Profile />);
+  const user = userEvent.setup();
 
-  userEvent.click(screen.getByRole("button", { name: /update/i }));
+  await user.click(screen.getByRole("button", { name: /update/i }));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Server failure");
@@ -96,8 +98,9 @@ describe("Profile page", () => {
     axios.put.mockRejectedValueOnce(new Error("network"));
 
   render(<Profile />);
+  const user = userEvent.setup();
 
-  userEvent.click(screen.getByRole("button", { name: /update/i }));
+  await user.click(screen.getByRole("button", { name: /update/i }));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Something went wrong");
@@ -106,6 +109,7 @@ describe("Profile page", () => {
 
   test("input change handlers update state and email is disabled", async () => {
     render(<Profile />);
+    const user = userEvent.setup();
 
     const emailInput = screen.getByPlaceholderText(/Enter Your Email/i);
     const passwordInput = screen.getByPlaceholderText(/Enter Your Password/i);
@@ -116,16 +120,16 @@ describe("Profile page", () => {
     expect(emailInput).toBeDisabled();
 
     // change password, phone, address and assert values update
-    userEvent.clear(passwordInput);
-    userEvent.type(passwordInput, "p@ssword1");
+    await user.clear(passwordInput);
+    await user.type(passwordInput, "p@ssword1");
     expect(passwordInput).toHaveValue("p@ssword1");
 
-    userEvent.clear(phoneInput);
-    userEvent.type(phoneInput, "555-0000");
+    await user.clear(phoneInput);
+    await user.type(phoneInput, "555-0000");
     expect(phoneInput).toHaveValue("555-0000");
 
-    userEvent.clear(addressInput);
-    userEvent.type(addressInput, "123 New St");
+    await user.clear(addressInput);
+    await user.type(addressInput, "123 New St");
     expect(addressInput).toHaveValue("123 New St");
   });
 
