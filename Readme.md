@@ -249,8 +249,8 @@ To begin unit testing with Jest in your project, follow these steps:
          2. deleteProductController
          3. updateProductController
             
-  -Milestone 2 - Integration testing
-     -Integration Suites Added (8 files):
+  - Milestone 2 - Integration testing
+     - Integration Suites Added (8 files):
        1. DeletedProductNotInCart.integration.test.js
        2. OrderSnapshotVsLiveProduct.integration.test.js
        3. ProductImageUploadAndList.integration.test.js
@@ -260,9 +260,11 @@ To begin unit testing with Jest in your project, follow these steps:
        7. UpdateCategoryReflectsOnHome.integration.test.js
        8. UpdateProduct.integration.test.js
    
-     -E2E Suites Enhanced (2 files):
-       -category-product.spec.js – Admin Category & Product CRUD (create/update/delete), UI validations (invalid price, duplicate handling), and image upload fallback
-       -admin-permissions.spec.js – Admin-only dashboard/menu validation, non-admin redirection, and profile accessibility
+     - E2E Suites Enhanced (2 files):
+       - category-product.spec.js
+         – Admin Category & Product CRUD (create/update/delete), UI validations (invalid price, duplicate handling), and image upload fallback
+       - admin-permissions.spec.js
+         – Admin-only dashboard/menu validation, non-admin redirection, and profile accessibility
   
 - David
 
