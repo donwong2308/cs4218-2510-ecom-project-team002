@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
+import { ensureAdminAndUserReady } from "../fixtures/bootstrap-admin.js";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:6060";
@@ -166,6 +167,8 @@ test.beforeAll(async ({ request }) => {
   } catch (err) {
     throw new Error(`Unable to reach ${BASE}. Start the app (frontend + API) and retry. Error: ${err.message}`);
   }
+  // Ensure accounts exist and admin is role=1
+  await ensureAdminAndUserReady(request);
 });
 
 

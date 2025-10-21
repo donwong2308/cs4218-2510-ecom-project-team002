@@ -388,7 +388,7 @@ describe("getAllOrdersController", () => {
     expect(mockPopulateChain.populate).toHaveBeenCalledWith("buyer", "name");
 
     // Assert sort was called with correct parameters
-    expect(mockPopulateChain.sort).toHaveBeenCalledWith({ createdAt: "-1" });
+    expect(mockPopulateChain.sort).toHaveBeenCalledWith({ createdAt: -1 });
 
     // Assert response contains orders
     expect(res.json).toHaveBeenCalled();
