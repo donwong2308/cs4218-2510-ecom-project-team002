@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { ensureAdminAndUserReady } from '../fixtures/bootstrap-admin.js';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000';
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:6060';
@@ -37,6 +38,9 @@ function unique(prefix) { return `${prefix}-${Date.now()}`; }
 // Tests
 
 test.describe('Admin permissions and profile', () => {
+  test.beforeAll(async ({ request }) => {
+    await ensureAdminAndUserReady(request);
+  });
   test('only admin accounts can see admin dashboard and menu', async ({ page }) => {
     // Admin should be able to visit admin create-category page
     await adminLogin(page);
@@ -80,11 +84,17 @@ test.describe('Admin permissions and profile', () => {
     await page.fill('input[placeholder="write a Price"]', '3.33');
     await page.fill('input[placeholder="write a quantity"]', '4');
 
-    // submit create
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle' }).catch(() => {}),
-      page.click('button:has-text("CREATE PRODUCT")')
-    ]);
+    // submit create (robust: wait for create-product API instead of navigation)
+    const waitCreate = page
+      .waitForResponse(r => r.url().includes('/api/v1/product/create-product') && r.request().method() === 'POST', { timeout: 20000 })
+      .catch(() => null);
+    await page.click('button:has-text("CREATE PRODUCT")');
+    const createResp = await waitCreate;
+    if (!createResp || !createResp.ok()) {
+      const status = createResp ? createResp.status() : 'no-response';
+      const body = createResp ? await createResp.text().catch(() => '') : '';
+      throw new Error(`Create product did not complete successfully: ${status} ${body}`);
+    }
 
   // verify product in products list and capture slug from link
   await page.goto(`${BASE}/dashboard/admin/products`);
