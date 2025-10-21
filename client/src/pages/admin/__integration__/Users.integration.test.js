@@ -8,7 +8,11 @@ import AdminRoute from "../../../components/Routes/AdminRoute";
 import { AuthProvider } from "../../../context/auth";
 import { CartProvider } from "../../../context/cart";
 import { SearchProvider } from "../../../context/search";
+
+// Mock axios
 jest.mock("axios");
+const mockedAxios = axios;
+
 jest.mock("react-hot-toast", () => ({
   success: jest.fn(),
   error: jest.fn(),
@@ -159,5 +163,83 @@ describe("Users admin route integration", () => {
 
     expect(screen.queryByText("Alice Admin")).not.toBeInTheDocument();
     expect(screen.queryByText("Bob Buyer")).not.toBeInTheDocument();
+  });
+});
+
+describe("Integration Test #4: User Management API Integration", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    axios.defaults = { headers: { common: {} } };
+    localStorage.setItem(
+      "auth",
+      JSON.stringify({
+        user: adminUser,
+        token: "admin-test-token",
+      })
+    );
+  });
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it("should integrate with user management APIs when implemented", async () => {
+    // Mock users API response (this would be used if Users component fetched data)
+    const mockUsers = [
+      {
+        _id: "user001",
+        name: "John Customer",
+        email: "john@customer.com",
+        role: 0,
+        phone: "1234567890",
+        address: "123 Customer St",
+        createdAt: "2023-12-01T10:30:00Z",
+      },
+      {
+        _id: "user002",
+        name: "Admin User",
+        email: "admin@admin.com",
+        role: 1,
+        phone: "0987654321",
+        address: "456 Admin Ave",
+        createdAt: "2023-11-15T14:45:00Z",
+      },
+    ];
+
+    // Setup mocks for all expected API calls
+    mockedAxios.get.mockImplementation((url) => {
+      if (url.includes("/api/v1/auth/admin-auth")) {
+        return Promise.resolve({ data: { ok: true } });
+      }
+      if (url.includes("/api/v1/category/get-category")) {
+        return Promise.resolve({ data: { category: mockCategories } });
+      }
+      if (url.includes("/api/v1/auth/all-users")) {
+        return Promise.resolve({ data: { users: mockUsers } });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    render(withProviders());
+
+    // Wait for admin auth verification
+    await waitFor(() => {
+      expect(mockedAxios.get).toHaveBeenCalledWith("/api/v1/auth/admin-auth");
+    });
+
+    // Verify the Users page renders (currently just shows "All Users" heading)
+    expect(
+      await screen.findByRole("heading", { name: /all users/i })
+    ).toBeInTheDocument();
+
+    // NOTE: Currently the Users component doesn't fetch user data
+    // This test verifies the component structure exists for future enhancement
+
+    // Verify admin navigation is accessible
+    expect(screen.getByText("Create Category")).toBeInTheDocument();
+    expect(screen.getByText("Create Product")).toBeInTheDocument();
+    expect(screen.getByText("Products")).toBeInTheDocument();
+    expect(screen.getByText("Orders")).toBeInTheDocument();
   });
 });

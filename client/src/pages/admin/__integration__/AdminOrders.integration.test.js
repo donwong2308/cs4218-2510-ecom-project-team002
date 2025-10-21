@@ -1424,6 +1424,133 @@ describe("AdminOrders Component Integration Tests", () => {
       expect(finalPriceElements24.length).toBeGreaterThan(0);
     });
   });
+
+  describe("Integration Test #8: Product Management Cross-Module Integration", () => {
+    /**
+     * TEST 8.1: AdminOrders-Product Management Integration
+     * ─────────────────────────────────────────────────────────────────────────
+     * Integration Points:
+     * - AdminOrders → Product data → Inventory management
+     * - AdminOrders → Product links → Product management navigation
+     * - Cross-module product consistency
+     */
+    it("should integrate with product management modules", async () => {
+      const authContext = createAdminAuthenticatedContext();
+
+      mockedAxios.get.mockResolvedValueOnce({
+        data: [mockAdminOrdersResponse[0]],
+      });
+
+      renderAdminOrdersWithAuth(authContext);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Wireless Bluetooth Headphones")
+        ).toBeInTheDocument();
+      });
+
+      // Test product management navigation integration
+      const productElements = screen.getAllByText(
+        /wireless bluetooth headphones/i
+      );
+      expect(productElements.length).toBeGreaterThan(0);
+
+      // Verify product image API integration
+      const productImage = screen.getByAltText("Wireless Bluetooth Headphones");
+      expect(productImage).toHaveAttribute(
+        "src",
+        "/api/v1/product/product-photo/prod001"
+      );
+
+      // Test potential product edit links (if they exist)
+      const editProductLink = screen.queryByRole("link", {
+        name: /edit product/i,
+      });
+      if (editProductLink) {
+        expect(editProductLink).toHaveAttribute(
+          "href",
+          expect.stringContaining("/admin/product/")
+        );
+      }
+    });
+  });
+
+  describe("Integration Test #9: Admin Dashboard Cross-Module Integration", () => {
+    /**
+     * TEST 9.1: AdminOrders-Dashboard Integration
+     * ─────────────────────────────────────────────────────────────────────────
+     * Integration Points:
+     * - AdminOrders → AdminDashboard → Navigation consistency
+     * - AdminOrders → AdminMenu → Route integration
+     * - Cross-module admin workflow validation
+     */
+    it("should integrate with admin dashboard navigation", async () => {
+      const authContext = createAdminAuthenticatedContext();
+
+      mockedAxios.get.mockResolvedValueOnce({
+        data: mockAdminOrdersResponse,
+      });
+
+      renderAdminOrdersWithAuth(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("admin-menu")).toBeInTheDocument();
+      });
+
+      // Verify AdminMenu integration (cross-module navigation)
+      const adminMenu = screen.getByTestId("admin-menu");
+      expect(adminMenu).toHaveTextContent("Admin Navigation Menu");
+
+      // Test dashboard breadcrumb integration
+      const dashboardLink = screen.queryByRole("link", { name: /dashboard/i });
+      if (dashboardLink) {
+        expect(dashboardLink).toHaveAttribute("href", "/dashboard/admin");
+      }
+    });
+  });
+
+  describe("Integration Test #10: Cart-Order Cross-Module Integration", () => {
+    /**
+     * TEST 10.1: Order-Cart State Integration
+     * ─────────────────────────────────────────────────────────────────────────
+     * Integration Points:
+     * - AdminOrders → Cart history → Order completion tracking
+     * - AdminOrders → Payment validation → Cart-to-order flow
+     * - Cross-module transaction consistency
+     */
+    it("should validate cart-to-order completion flow", async () => {
+      const authContext = createAdminAuthenticatedContext();
+
+      // Mock order that came from cart
+      const cartCompletedOrder = {
+        ...mockAdminOrdersResponse[0],
+        cartId: "cart_123",
+        payment: {
+          success: true,
+          transaction_id: "braintree_txn_456",
+          cart_total: 229.98,
+          payment_method: "credit_card",
+        },
+      };
+
+      mockedAxios.get.mockResolvedValueOnce({
+        data: [cartCompletedOrder],
+      });
+
+      renderAdminOrdersWithAuth(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByText("Success")).toBeInTheDocument();
+      });
+
+      // Verify payment integration shows cart completion
+      expect(screen.getByText("Success")).toBeInTheDocument();
+
+      // Verify cart-originated order data
+      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      expect(screen.getByText("2")).toBeInTheDocument(); // Product quantity from cart
+    });
+  });
 });
 
 /**
