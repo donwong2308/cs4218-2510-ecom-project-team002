@@ -153,9 +153,9 @@ To begin unit testing with Jest in your project, follow these steps:
 
 - Donavon:
 
-  - Features: Contact, Login, Payment, Policy, Registration, and Protected Routes
-  - Client related Files: pages/Contact.js, pages/Auth/Login.js, pages/Policy.js, context/auth.js, pages/Auth/Register.js
-  - Server Related Files:
+  - **Milestone 1 - Features:** Contact, Login, Payment, Policy, Registration, and Protected Routes
+  - **Milestone 1 - Client related Files:** pages/Contact.js, pages/Auth/Login.js, pages/Policy.js, context/auth.js, pages/Auth/Register.js
+  - **Milestone 1 - Server Related Files:**
     - controllers/productController.js
       1.  braintreeTokenController
       2.  brainTreePaymentController
@@ -166,6 +166,66 @@ To begin unit testing with Jest in your project, follow these steps:
       2.  loginController
       3.  forgotPasswordController
       4.  testController
+
+  - **Milestone 2 - Integration Testing:**
+    - **Phase 1: Foundation Layer (37 tests)** - Bottom-up integration testing
+      - Contact Component Integration (5 tests) - Layout, Header, Footer, SEO metadata integration
+      - Policy Component Integration (5 tests) - Cross-page navigation, content display
+      - authHelper Utility Integration (12 tests) - Real bcrypt integration for password hashing/comparison
+      - Database Configuration Integration (14 tests) - MongoDB connection, error handling, environment config
+      - Files: `client/src/pages/__integration__/Contact.integration.test.js`, `client/src/pages/__integration__/Policy.integration.test.js`, `helpers/__integration__/authHelper.integration.test.js`, `config/__integration__/db.integration.test.js`
+    
+    - **Phase 2: Security & Navigation Layer (42 tests)** - Top-down integration testing
+      - Protected Routes Integration (8 tests) - PrivateRoute, AdminRoute, authentication gates
+      - Authentication Controller Integration (11 tests) - Register, login, forgot password flows
+      - Middleware Chain Integration (11 tests) - JWT verification, admin authorization
+      - Navigation Guards Integration (12 tests) - Header, AdminMenu, UserMenu role-based access
+      - Files: `client/src/components/Routes/__integration__/ProtectedRoutes.integration.test.js`, `controllers/__integration__/authController.integration.test.js`, `middlewares/__integration__/authMiddleware.integration.test.js`, `client/src/components/__integration__/Navigation.integration.test.js`
+    
+    - **Phase 3: Business Logic Layer (113 tests)** - Middle-layer integration testing
+      - Login Component Integration (18 tests) - Complete login flow, form validation, error handling
+      - Register Component Integration (21 tests) - Registration workflow, security answer integration
+      - ForgotPassword Component Integration (22 tests) - Password reset flow, security question validation (coverage: 36.84% → 100%)
+      - CartPage Component Integration (26 tests) - Payment processing, Braintree integration, cart management (7 critical bugs found and fixed)
+      - Auth Context Integration (24 tests) - Context provider/consumer, localStorage persistence, axios header sync
+      - Files: `client/src/pages/Auth/__integration__/Login.integration.test.js`, `client/src/pages/Auth/__integration__/Register.integration.test.js`, `client/src/pages/Auth/__integration__/ForgotPassword.integration.test.js`, `client/src/pages/__integration__/CartPage.integration.test.js`, `client/src/context/__integration__/auth.integration.test.js`
+    
+    - **Bugs Found:** 11 critical bugs discovered and fixed through integration testing
+    - **Code Coverage:** Backend 87.66%, Frontend components 94-100%
+    - **Documentation:** `COMPREHENSIVE_INTEGRATION_TESTS_REPORT.md` (2,850+ lines of test code with 53% inline documentation)
+
+  - **Milestone 2 - End-to-End Testing with Playwright (20 tests):**
+    - **Suite 1: Authentication & User Journey (8 tests, 50.5s)** - Black box testing
+      - New user registration flow, login flow, invalid credentials handling
+      - Forgot password workflow, session persistence, logout flow
+      - Multiple user types (regular vs admin) navigation
+      - **Bug Found:** Missing Forgot Password page (discovered and fixed)
+      - File: `playwright/e2e/auth-registration-login.spec.js`
+    
+    - **Suite 2: Payment & Checkout Flow (4 tests, 108s)** - Braintree integration testing
+      - Guest user cart operations, login requirement for checkout
+      - Complete payment with Braintree Drop-in UI (iframe-based card input)
+      - Payment failure handling with declined test cards
+      - **CRITICAL BUG Found:** Invalid payment processing vulnerability - system was accepting declined cards and creating orders without valid payment (discovered and fixed)
+      - File: `playwright/e2e/payment-checkout.spec.js`
+    
+    - **Suite 3: Static Pages & Navigation (4 tests, 27.2s)** - Content verification
+      - Contact page navigation and content display
+      - Privacy policy page navigation and content
+      - Cross-page navigation flow (Home → Contact → Policy → Home)
+      - Header/footer consistency across all pages
+      - File: `playwright/e2e/static-pages-navigation.spec.js`
+    
+    - **Suite 4: Protected Routes & Authorization (4 tests, 49.0s)** - Access control testing
+      - Unauthenticated user access restrictions
+      - Regular user vs admin authorization
+      - Session timeout and re-authentication
+      - Logout access clearing
+      - File: `playwright/e2e/protected-routes.spec.js`
+    
+    - **Test Approach:** Black box testing - no knowledge of internal code, only user-visible UI elements and actions
+    - **Browsers Tested:** Chromium
+    - **Critical Security Findings:** Payment validation vulnerability (products shipped without valid payment)
 
 - Hao Wen
   - Features: Admin Actions, Admin Dashboard, Admin View Products, Profile
