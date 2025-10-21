@@ -88,6 +88,9 @@ describe('E2E Integration: connectDB wiring + Category model (in-memory MongoDB)
   it('enforces validation / unique constraints (if defined on schema)', async () => {
     // This test only triggers if your schema has a unique index on name or slug.
     
+    // Ensure indexes are created before testing unique constraints
+    await categoryModel.init();
+
     
     await categoryModel.create({ name: 'Gadgets', slug: 'gadgets' });
 
