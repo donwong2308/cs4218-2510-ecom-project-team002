@@ -40,6 +40,22 @@ export const createProductController = async (req, res) => {
           .send({ error: "photo is Required and should be less then 1mb" });
     }
 
+    // Additional type validation: ensure numeric fields are numbers
+    if (isNaN(Number(price))) {
+      return res.status(400).send({ success: false, error: "Price must be a number" });
+    }
+    if (isNaN(Number(quantity))) {
+      return res.status(400).send({ success: false, error: "Quantity must be a number" });
+    }
+
+    // Prevent duplicate product name within the same category
+    if (category) {
+      const existing = await productModel.findOne({ name: name, category: category }).lean();
+      if (existing) {
+        return res.status(409).send({ success: false, error: "Product with same name already exists in this category" });
+      }
+    }
+
     const products = new productModel({ ...req.fields, slug: slugify(name) });
     if (photo) {
       products.photo.data = fs.readFileSync(photo.path);
@@ -92,6 +108,12 @@ export const getSingleProductController = async (req, res) => {
       .findOne({ slug: req.params.slug })
       .select("-photo")
       .populate("category");
+    if (!product) {
+      return res.status(404).send({
+        success: false,
+        message: "Product not found",
+      });
+    }
     res.status(200).send({
       success: true,
       message: "Single Product Fetched",
@@ -107,25 +129,47 @@ export const getSingleProductController = async (req, res) => {
   }
 };
 
+// get single product by id
+export const getProductByIdController = async (req, res) => {
+  try {
+    const product = await productModel
+      .findById(req.params.id)
+      .select("-photo")
+      .populate("category");
+    if (!product) {
+      return res.status(404).send({ success: false, message: "Product not found" });
+    }
+    res.status(200).send({ success: true, product });
+  } catch (error) {
+    console.log(error);
+    res.status(404).send({ success: false, message: "Product not found" });
+  }
+};
+
 // get photo
 export const productPhotoController = async (req, res) => {
   try {
     const product = await productModel.findById(req.params.pid).select("photo");
-    if (!product.photo.data) {
-      res.status(404).send({
+    if (!product || !product.photo || !product.photo.data) {
+      return res.status(404).send({
         success: false,
         message: "There does not exist a photo",
       });
     }
-    res.set("Content-type", product.photo.contentType);
-    return res.status(200).send(product.photo.data);
-  } catch (error) {
-    console.log(error);
-    res.status(500).send({
-      success: false,
-      message: "Erorr while getting photo",
-      error: error.message,
-    });
+
+    // Use header key that tests expect (case-insensitive in Express, but tests assert specific case)
+    res.set("Content-type", product.photo.contentType || "image/jpeg");
+    return res.status(200).send(product.photo.data); // return so nothing else runs
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) {
+      return res.status(500).send({
+        success: false,
+        message: "Erorr while getting photo",
+        error: err.message,
+      });
+    }
+    // headers already sent — do nothing
   }
 };
 
@@ -169,6 +213,22 @@ export const updateProductController = async (req, res) => {
         return res
           .status(500)
           .send({ error: "photo is Required and should be less then 1mb" });
+    }
+
+    // Additional type validation
+    if (isNaN(Number(price))) {
+      return res.status(400).send({ success: false, error: "Price must be a number" });
+    }
+    if (isNaN(Number(quantity))) {
+      return res.status(400).send({ success: false, error: "Quantity must be a number" });
+    }
+
+    // Prevent updating to a name/category that already exists on a different product
+    if (name && category) {
+      const existing = await productModel.findOne({ name: name, category: category, _id: { $ne: req.params.pid } }).lean();
+      if (existing) {
+        return res.status(409).send({ success: false, error: "Another product with same name exists in this category" });
+      }
     }
 
     const products = await productModel.findByIdAndUpdate(

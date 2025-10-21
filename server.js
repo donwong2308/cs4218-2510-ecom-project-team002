@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoute.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import cors from "cors";
+import path from "path";
 
 // configure env
 dotenv.config();
@@ -15,6 +16,8 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const __dirname = path.resolve();
+app.use("/images", express.static(path.join(__dirname, "client", "public", "images")));
 
 //middlewares
 app.use(cors());

@@ -1122,6 +1122,8 @@ describe("createProductController", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  // Ensure duplicate check path doesn't throw when calling .lean()
+  productModel.findOne = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
 
     // Mute noisy logs during these tests
     logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
@@ -1264,6 +1266,8 @@ describe("updateProductController", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  // Ensure duplicate check path doesn't throw when calling .lean()
+  productModel.findOne = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
 
     // Mute noisy logs during these tests
     logSpy = jest.spyOn(console, "log").mockImplementation(() => {});

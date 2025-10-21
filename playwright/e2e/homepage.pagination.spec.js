@@ -1,11 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { homePageSelectors } from "../fixtures/test-data.js";
 
-const selectors = {
-  navbar: ".navbar",
-  productCard: "div.card",
-  loadMoreBtn: "button.loadmore",
-  productTitleInCard: "h5, h3, h2",
-};
+const selectors = homePageSelectors;
 
 async function waitForAppAndBackend(page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });

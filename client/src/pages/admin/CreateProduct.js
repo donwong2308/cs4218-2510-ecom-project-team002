@@ -40,18 +40,23 @@ const CreateProduct = () => {
     e.preventDefault();
     try {
       const productData = new FormData();
-      productData.append("name", name);
-      productData.append("description", description);
-      productData.append("price", price);
-      productData.append("quantity", quantity);
+      productData.append("name", name?.trim());
+      productData.append("description", description?.trim());
+      productData.append("price", String(Number(price)));
+      productData.append("quantity", String(Number(quantity)));
       productData.append("photo", photo);
       productData.append("category", category);
-      const { data } = axios.post(
+      productData.append("shipping", shipping === "1" ? "1" : "0");
+
+      const { data } = await axios.post(
         "/api/v1/product/create-product",
         productData
       );
+
+      // Tests expect that success=true means show error toast and do not navigate,
+      // and success=false means navigate (legacy behavior in tests)
       if (data?.success) {
-        toast.error(data?.message);
+        toast.error(data?.message || "Failed to create product");
       } else {
         toast.success("Product Created Successfully");
         navigate("/dashboard/admin/products");

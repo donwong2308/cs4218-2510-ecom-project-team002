@@ -1,17 +1,26 @@
 
 import request from "supertest";
 import express from "express";
-import productRoutes from "../routes/productRoutes.js";
-import * as controller from "../controllers/productController.js";
-import productModel from "../models/productModel.js";
+// Mock braintree before importing routes/controllers to avoid env requirements
+jest.mock("braintree", () => ({
+  BraintreeGateway: jest.fn().mockImplementation(() => ({
+    clientToken: { generate: jest.fn((_, cb) => cb(null, { clientToken: "test" })) },
+    transaction: { sale: jest.fn((_, cb) => cb(null, { success: true })) },
+  })),
+  Environment: { Sandbox: "Sandbox" },
+}));
+
+import productRoutes from "../../routes/productRoutes.js";
+import * as controller from "../../controllers/productController.js";
+import productModel from "../../models/productModel.js";
 
 // Create an express app for testing
 const app = express();
 app.use(express.json());
-app.use("/api/v1", productRoutes);
+app.use("/api/v1/product", productRoutes);
 
 // Mock productModel methods
-jest.mock("../models/productModel.js", () => ({
+jest.mock("../../models/productModel.js", () => ({
   __esModule: true,
   default: {
     findOne: jest.fn(() => ({
