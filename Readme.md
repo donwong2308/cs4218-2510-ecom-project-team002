@@ -308,6 +308,21 @@ To begin unit testing with Jest in your project, follow these steps:
       - models/productModel.js
     - models/productModel.js
 
+  - Milestone 2 - Integration testing
+     - Integration Suites Added (8 files):
+       1. cart.integration.test.js
+       2. cartpage.integration.test.js
+       3. productdetails.integration.test.js
+       4. productcontroller.integration.test.js
+   
+     - E2E Suites Enhanced (2 files):
+       - cart.spec.js
+         - Verifies Add/view/remove; totals correct after stable network+DOM; removing last item yields clean empty state (no stale totals).
+       - homepage.filters.spec.js
+         - Validates price buckets, category toggle, and category ∩ price; clear/reset works; zero-result shows clean empty state.
+       -  homepage.pagination.spec.js
+         - Fixed page size; correct next/prev; resets on filter changes; no off-by-one or stale pages.
+
 - Zoebelle:
 
   - **Milestone 1 – Features:** Category Listing & Single-Category View, Site Layout, Spinner UX, Static Pages, Global Search
