@@ -228,25 +228,42 @@ To begin unit testing with Jest in your project, follow these steps:
     - **Critical Security Findings:** Payment validation vulnerability (products shipped without valid payment)
 
 - Hao Wen
-  - Features: Admin Actions, Admin Dashboard, Admin View Products, Profile
-  - Client related Files:
-    - components/Form/CategoryForm.js
-    - pages/admin/CreateCategory.js
-    - pages/admin/CreateProduct.js
-    - pages/admin/UpdateProduct.js
-    - components/AdminMenu.js
-    - pages/admin/AdminDashboard.js
-    - pages/admin/Products.js
-    - pages/user/Profile.js
-  - Server Related Files:
-    - controllers/categoryController.js
-      1. createCategoryController
-      2. updateCategoryController
-      3. deleteCategoryController
-    - controllers/productController.js
-      1. createProductController
-      2. deleteProductController
-      3. updateProductController
+  - Milestone 1 - Unit testing
+     - Features: Admin Actions, Admin Dashboard, Admin View Products, Profile
+     - Client related Files:
+       - components/Form/CategoryForm.js
+       - pages/admin/CreateCategory.js
+       - pages/admin/CreateProduct.js
+       - pages/admin/UpdateProduct.js
+       - components/AdminMenu.js
+       - pages/admin/AdminDashboard.js
+       - pages/admin/Products.js
+       - pages/user/Profile.js
+     - Server Related Files:
+       - controllers/categoryController.js
+         1. createCategoryController
+         2. updateCategoryController
+         3. deleteCategoryController
+       - controllers/productController.js
+         1. createProductController
+         2. deleteProductController
+         3. updateProductController
+            
+  -Milestone 2 - Integration testing
+     -Integration Suites Added (8 files):
+       1. DeletedProductNotInCart.integration.test.js
+       2. OrderSnapshotVsLiveProduct.integration.test.js
+       3. ProductImageUploadAndList.integration.test.js
+       4. Profile.integration.test.js
+       5. ProtectedAdminRoutes.integration.test.js
+       6. SearchAndFilterReflectsUpdates.integration.test.js
+       7. UpdateCategoryReflectsOnHome.integration.test.js
+       8. UpdateProduct.integration.test.js
+   
+     -E2E Suites Enhanced (2 files):
+       -category-product.spec.js – Admin Category & Product CRUD (create/update/delete), UI validations (invalid price, duplicate handling), and image upload fallback
+       -admin-permissions.spec.js – Admin-only dashboard/menu validation, non-admin redirection, and profile accessibility
+  
 - David
 
   - Features: Admin View Orders, Admin View Users, General, Home, Order
