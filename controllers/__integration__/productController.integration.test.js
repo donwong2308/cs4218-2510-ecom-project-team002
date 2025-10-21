@@ -1,17 +1,17 @@
 
 import request from "supertest";
 import express from "express";
-import productRoutes from "../routes/productRoutes.js";
-import * as controller from "../controllers/productController.js";
-import productModel from "../models/productModel.js";
+import productRoutes from "../../routes/productRoutes.js";
+import * as controller from "../../controllers/productController.js";
+import productModel from "../../models/productModel.js";
 
 // Create an express app for testing
 const app = express();
 app.use(express.json());
-app.use("/api/v1", productRoutes);
+app.use("/api/v1/product", productRoutes);
 
 // Mock productModel methods
-jest.mock("../models/productModel.js", () => ({
+jest.mock("../../models/productModel.js", () => ({
   __esModule: true,
   default: {
     findOne: jest.fn(() => ({
