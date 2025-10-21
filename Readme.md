@@ -436,6 +436,7 @@ To begin unit testing with Jest in your project, follow these steps:
     - pages/ProductDetails.js
     - pages/CategoryProduct.js
   - Server Related Files:
+
     - controllers/productController.js
       1. getProductController
       2. getSingleProductController
@@ -448,6 +449,23 @@ To begin unit testing with Jest in your project, follow these steps:
       9. productCategoryController
       - models/productModel.js
     - models/productModel.js
+
+  - Milestone 2 - Integration testing
+
+    - Integration Suites Added (4 files):
+
+      1.  cart.integration.test.js
+      2.  cartpage.integration.test.js
+      3.  productdetails.integration.test.js
+      4.  productcontroller.integration.test.js
+
+    - E2E Suites Enhanced (3 files):
+      - cart.spec.js
+        - Verifies Add/view/remove; totals correct after stable network+DOM; removing last item yields clean empty state (no stale totals).
+      - homepage.filters.spec.js
+        - Validates price buckets, category toggle, and category ∩ price; clear/reset works; zero-result shows clean empty state.
+      - homepage.pagination.spec.js
+      - Fixed page size; correct next/prev; resets on filter changes; no off-by-one or stale pages.
 
 - Zoebelle:
 
@@ -476,6 +494,10 @@ To begin unit testing with Jest in your project, follow these steps:
     - config/db.js
 
   - **Milestone 2 – Integration Testing (Backend):**
+
+    - db.integration.test.js – Real MongoMemoryServer connection; verifies `connectDB()` and env wiring
+    - categoryModel.integration.test.js – Schema persistence and uniqueness
+    - categoryController.integration.test.js – CRUD, list, and single-category controllers
 
     - **Phase 1 – Database Configuration & Model Layer** – real in-memory MongoDB (MongoMemoryServer)
       - Validates `connectDB()` via `MONGO_URL`; confirms connection (readyState=1) and boot log
@@ -525,6 +547,14 @@ To begin unit testing with Jest in your project, follow these steps:
     - **Documentation:** `COMPREHENSIVE_INTEGRATION_TESTS_REPORT.md` (frontend section in progress)
 
   - **Milestone 2 – End-to-End Testing with Playwright:**
+
+    - search-functionality.spec.js – Validates SearchInput, search results flow, and error resilience
+    - header-footer.spec.js – Tests layout, header/footer consistency, spinner redirect, and metadata
+    - database-error.spec.js – Ensures graceful UI handling on 5xx/4xx backend failures
+    - database-connectivity.spec.js – Confirms DB-backed flows and stable product/category fetch
+    - category-functionality.spec.js – Verifies category UI, hook wiring, navigation
+    - 404-page.spec.js – Tests 404 layout, “Go Back” call-to-action, accessibility, and responsive design
+    - about-page.spec.js – Validates image/text structure, footer links, and layout responsiveness
 
     - **Suite 1: Search Functionality (~20+ tests, ~stable) – SearchInput + Search Results + Context + Resilience**
       - **SearchInput (navbar):** form renders (placeholder/aria), value typing/clearing, submit via button/Enter, empty-search navigates to `/search`
