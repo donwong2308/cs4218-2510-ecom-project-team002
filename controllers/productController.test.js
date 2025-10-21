@@ -1620,3 +1620,360 @@ describe("Braintree Payment Controller Tests (Actual Functions)", () => {
     });
   });
 });
+
+// ===== Additional coverage tests (append to end of file) =====
+
+describe("Extra coverage for controllers & payments", () => {
+  let req, res;
+
+  const makeRes = () => {
+    const r = {};
+    r.status = jest.fn().mockReturnValue(r);
+    r.send = jest.fn().mockReturnValue(r);
+    r.json = jest.fn().mockReturnValue(r);
+    r.set = jest.fn().mockReturnValue(r);
+    return r;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    res = makeRes();
+  });
+
+  // ---------- getSingleProductController: not found ----------
+  test("getSingleProductController → 404 when product not found", async () => {
+    const populate = jest.fn().mockResolvedValue(null);
+    const select = jest.fn().mockReturnValue({ populate });
+    productModel.findOne.mockReturnValue({ select, populate });
+
+    req = { params: { slug: "missing-slug" } };
+    await getSingleProductController(req, res);
+
+    expect(productModel.findOne).toHaveBeenCalledWith({ slug: "missing-slug" });
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      message: "Product not found",
+    });
+  });
+
+  // ---------- productPhotoController: error but headers already sent ----------
+  test("productPhotoController → error path with headers already sent (no response sent)", async () => {
+    const select = jest.fn().mockRejectedValue(new Error("DB fail"));
+    productModel.findById.mockReturnValue({ select });
+
+    req = { params: { pid: "pX" } };
+    // simulate headers already sent (controller should do nothing in catch)
+    res.headersSent = true;
+
+    await productPhotoController(req, res);
+
+    expect(productModel.findById).toHaveBeenCalledWith("pX");
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.send).not.toHaveBeenCalled();
+  });
+
+  // ---------- productFiltersController: args combinations ----------
+  test("productFiltersController → only category (no price)", async () => {
+    const items = [
+      { _id: "1", price: 30, category: "c1" },
+      { _id: "2", price: 70, category: "c2" },
+    ];
+    productModel.find.mockImplementation(async (args) => {
+      const set = new Set(args.category);
+      return items.filter((p) => set.has(p.category));
+    });
+
+    req = { body: { checked: ["c1"], radio: [] } };
+    await productFiltersController(req, res);
+
+    expect(productModel.find).toHaveBeenCalledWith({ category: ["c1"] });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      products: [items[0]],
+    });
+  });
+
+  test("productFiltersController → only price (no category)", async () => {
+    const items = [
+      { _id: "1", price: 30, category: "c1" },
+      { _id: "2", price: 70, category: "c2" },
+    ];
+    productModel.find.mockImplementation(async (args) => {
+      const { $gte, $lte } = args.price || {};
+      return items.filter((p) => p.price >= $gte && p.price <= $lte);
+    });
+
+    req = { body: { checked: [], radio: [50, 80] } };
+    await productFiltersController(req, res);
+
+    expect(productModel.find).toHaveBeenCalledWith({ price: { $gte: 50, $lte: 80 } });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      products: [items[1]],
+    });
+  });
+
+  test("productFiltersController → no filters (return all)", async () => {
+    const items = [
+      { _id: "1", price: 10, category: "c1" },
+      { _id: "2", price: 99, category: "c2" },
+    ];
+    productModel.find.mockResolvedValue(items);
+
+    req = { body: { checked: [], radio: [] } };
+    await productFiltersController(req, res);
+
+    expect(productModel.find).toHaveBeenCalledWith({});
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({ success: true, products: items });
+  });
+
+  // ---------- productListController: default page and page 2 ----------
+  test("productListController → default page when param missing", async () => {
+    const perPage = 6;
+    const all = Array.from({ length: 10 }, (_, i) => ({
+      _id: String(i),
+      createdAt: new Date(2025, 0, i + 1),
+    }));
+
+    let capturedSkip = 0;
+    let capturedLimit;
+    const sort = jest.fn().mockImplementation((s) => {
+      const sorted = [...all].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const sliced = sorted.slice(capturedSkip).slice(0, capturedLimit);
+      return Promise.resolve(sliced);
+    });
+    const limit = jest.fn().mockImplementation((n) => { capturedLimit = n; return { sort }; });
+    const skip  = jest.fn().mockImplementation((n) => { capturedSkip = n; return { limit, sort }; });
+    const select = jest.fn().mockReturnValue({ skip, limit, sort });
+    productModel.find.mockReturnValue({ select, skip, limit, sort });
+
+    req = { params: {} };
+    await productListController(req, res);
+
+    expect(capturedSkip).toBe(0);
+    expect(capturedLimit).toBe(perPage);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send.mock.calls[0][0].products.length).toBeLessThanOrEqual(perPage);
+  });
+
+  test("productListController → page 2 returns next slice", async () => {
+    const perPage = 6;
+    const all = Array.from({ length: 12 }, (_, i) => ({
+      _id: `p${i}`,
+      createdAt: new Date(2025, 0, i + 1),
+    }));
+
+    let capturedSkip = 0;
+    let capturedLimit;
+    const sort = jest.fn().mockImplementation((s) => {
+      const sorted = [...all].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const sliced = sorted.slice(capturedSkip).slice(0, capturedLimit);
+      return Promise.resolve(sliced);
+    });
+    const limit = jest.fn().mockImplementation((n) => { capturedLimit = n; return { sort }; });
+    const skip  = jest.fn().mockImplementation((n) => { capturedSkip = n; return { limit, sort }; });
+    const select = jest.fn().mockReturnValue({ skip, limit, sort });
+    productModel.find.mockReturnValue({ select, skip, limit, sort });
+
+    req = { params: { page: "2" } };
+    await productListController(req, res);
+
+    expect(capturedSkip).toBe(perPage);
+    expect(capturedLimit).toBe(perPage);
+    const sent = res.send.mock.calls[0][0].products;
+    expect(Array.isArray(sent)).toBe(true);
+  });
+
+  // ---------- createProductController: numeric validation & duplicates & no photo ----------
+  describe("createProductController extra branches", () => {
+    beforeEach(() => {
+      // default: no duplicate
+      productModel.findOne = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+      slugify.mockImplementation((s) => s.toLowerCase().replace(/\s+/g, "-"));
+    });
+
+    test("price must be a number", async () => {
+      req = {
+        fields: {
+          name: "N",
+          description: "D",
+          price: "NaN!",
+          category: "C",
+          quantity: 3,
+          shipping: true,
+        },
+        files: {},
+      };
+      await createProductController(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({ success: false, error: "Price must be a number" });
+    });
+
+    test("quantity must be a number", async () => {
+      req = {
+        fields: {
+          name: "N",
+          description: "D",
+          price: 10,
+          category: "C",
+          quantity: "oops",
+          shipping: true,
+        },
+        files: {},
+      };
+      await createProductController(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({ success: false, error: "Quantity must be a number" });
+    });
+
+    test("duplicate name within category returns 409", async () => {
+      productModel.findOne = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ _id: "exists" }),
+      });
+
+      req = {
+        fields: {
+          name: "Same",
+          description: "D",
+          price: 10,
+          category: "C",
+          quantity: 1,
+          shipping: true,
+        },
+        files: {},
+      };
+      await createProductController(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        error: "Product with same name already exists in this category",
+      });
+    });
+
+    test("create without photo still succeeds", async () => {
+      const mockSave = jest.fn().mockResolvedValue({});
+      productModel.mockImplementation(() => ({ save: mockSave, photo: {} }));
+
+      req = {
+        fields: {
+          name: "No Photo",
+          description: "D",
+          price: 10,
+          category: "C",
+          quantity: 1,
+          shipping: false,
+        },
+        files: {}, // no photo
+      };
+      await createProductController(req, res);
+
+      expect(mockSave).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+  });
+
+  // ---------- updateProductController: numeric validation & duplicates & no photo ----------
+  describe("updateProductController extra branches", () => {
+    beforeEach(() => {
+      productModel.findOne = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+      slugify.mockImplementation((s) => s.toLowerCase().replace(/\s+/g, "-"));
+    });
+
+    test("price must be a number", async () => {
+      req = {
+        params: { pid: "p1" },
+        fields: {
+          name: "N",
+          description: "D",
+          price: "bad",
+          category: "C",
+          quantity: 2,
+          shipping: false,
+        },
+        files: {},
+      };
+      await updateProductController(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({ success: false, error: "Price must be a number" });
+    });
+
+    test("quantity must be a number", async () => {
+      req = {
+        params: { pid: "p1" },
+        fields: {
+          name: "N",
+          description: "D",
+          price: 10,
+          category: "C",
+          quantity: "NaN",
+          shipping: false,
+        },
+        files: {},
+      };
+      await updateProductController(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith({ success: false, error: "Quantity must be a number" });
+    });
+
+    test("duplicate on another product returns 409", async () => {
+      productModel.findOne = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ _id: "differentId" }),
+      });
+
+      req = {
+        params: { pid: "p1" },
+        fields: {
+          name: "Collide",
+          description: "D",
+          price: 10,
+          category: "C",
+          quantity: 1,
+          shipping: false,
+        },
+        files: {},
+      };
+      await updateProductController(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.send).toHaveBeenCalledWith({
+        success: false,
+        error: "Another product with same name exists in this category",
+      });
+    });
+
+    test("update succeeds without new photo", async () => {
+      const mockSave = jest.fn().mockResolvedValue({});
+      productModel.findByIdAndUpdate = jest.fn().mockResolvedValue({
+        _id: "p1",
+        photo: {},
+        save: mockSave,
+      });
+
+      req = {
+        params: { pid: "p1" },
+        fields: {
+          name: "Ok",
+          description: "D",
+          price: 10,
+          category: "C",
+          quantity: 1,
+          shipping: false,
+        },
+        files: {}, // no photo
+      };
+      await updateProductController(req, res);
+
+      expect(productModel.findByIdAndUpdate).toHaveBeenCalled();
+      expect(mockSave).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+  });
+});
+
