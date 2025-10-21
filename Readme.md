@@ -309,13 +309,13 @@ To begin unit testing with Jest in your project, follow these steps:
     - models/productModel.js
 
   - Milestone 2 - Integration testing
-     - Integration Suites Added (8 files):
+     - Integration Suites Added (4 files):
        1. cart.integration.test.js
        2. cartpage.integration.test.js
        3. productdetails.integration.test.js
        4. productcontroller.integration.test.js
    
-     - E2E Suites Enhanced (2 files):
+     - E2E Suites Enhanced (3 files):
        - cart.spec.js
          - Verifies Add/view/remove; totals correct after stable network+DOM; removing last item yields clean empty state (no stale totals).
        - homepage.filters.spec.js
