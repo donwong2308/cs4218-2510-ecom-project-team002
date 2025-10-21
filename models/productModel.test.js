@@ -6,6 +6,9 @@ jest.mock("mongoose", () => {
       captured.def = definition;
       captured.opts = options;
     }
+    index() {
+      // no-op, but capture call if needed later
+    }
   }
 
   const mock = {

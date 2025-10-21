@@ -15,6 +15,19 @@ const asNumber = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// Normalize price range before sending to API
+// Accepts: null | [] | [min,max]
+// Returns: [] if empty, else numeric [min, max] with a large default for missing/invalid max
+const sanitizeRadioForPayload = (r) => {
+  if (!Array.isArray(r) || r.length === 0) return [];
+  const [min, max] = r;
+  const numMin = Number(min);
+  const numMax = Number(max);
+  const safeMin = Number.isFinite(numMin) ? numMin : 0;
+  const safeMax = Number.isFinite(numMax) ? numMax : 1_000_000_000;
+  return [safeMin, safeMax];
+};
+
 const HomePage = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useCart();
@@ -80,13 +93,6 @@ const HomePage = () => {
     else all = all.filter((c) => c !== id);
     setChecked(all);
     setPage(1);
-  };
-
-  const sanitizeRadioForPayload = (arr) => {
-    if (!arr || arr.length !== 2) return [];
-    const [min, max] = arr;
-    const safeMax = Number.isFinite(max) ? max : 1_000_000_000;
-    return [Number(min), Number(safeMax)];
   };
 
   const filterProduct = async (cats, priceRange) => {
@@ -240,7 +246,7 @@ const HomePage = () => {
                   {loading ? (
                     "Loading ..."
                   ) : (
-                      "Load more"
+                      "Loadmore"
                   )}
                 </button>
               )}

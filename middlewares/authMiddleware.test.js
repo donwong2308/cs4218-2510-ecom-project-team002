@@ -68,9 +68,9 @@ describe('Authentication Middleware', () => {
       // Execute the middleware
       await requireSignIn(req, res, next);
 
-      // Verify JWT.verify was called with correct parameters
+      // Verify JWT.verify was called with token sans 'Bearer'
       expect(JWT.verify).toHaveBeenCalledWith(
-        'Bearer valid-jwt-token',
+        'valid-jwt-token',
         process.env.JWT_SECRET
       );
 
@@ -102,20 +102,19 @@ describe('Authentication Middleware', () => {
       // Execute the middleware
       await requireSignIn(req, res, next);
 
-      // Verify JWT.verify was called
+      // Verify JWT.verify was called (sans 'Bearer')
       expect(JWT.verify).toHaveBeenCalledWith(
-        'Bearer invalid-jwt-token',
+        'invalid-jwt-token',
         process.env.JWT_SECRET
       );
 
-      // Verify error is logged (middleware logs errors but doesn't send response)
+      // Verify error is logged and 401 is returned
       expect(console.log).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.send).toHaveBeenCalledWith({ success: false, message: "Unauthorized: Invalid token" });
 
       // Verify req.user is not set when token is invalid
       expect(req.user).toBeNull();
-
-      // Note: The current middleware implementation logs errors but doesn't 
-      // send error responses - this might be intentional or could be improved
     });
 
     /**
@@ -129,14 +128,11 @@ describe('Authentication Middleware', () => {
       // Execute the middleware
       await requireSignIn(req, res, next);
 
-      // Verify JWT.verify is called (will throw error for undefined token)
-      expect(JWT.verify).toHaveBeenCalledWith(
-        undefined,
-        process.env.JWT_SECRET
-      );
-
-      // Should log the error
+      // Should log and return 401 without calling JWT.verify
+      expect(JWT.verify).not.toHaveBeenCalled();
       expect(console.log).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.send).toHaveBeenCalledWith({ success: false, message: "Unauthorized: Missing token" });
     });
 
     /**
@@ -156,11 +152,13 @@ describe('Authentication Middleware', () => {
         throw new Error('secretOrPrivateKey must have a value');
       });
 
-      // Execute the middleware
-      await requireSignIn(req, res, next);
+  // Execute the middleware
+  await requireSignIn(req, res, next);
 
-      // Should handle the error gracefully
-      expect(console.log).toHaveBeenCalled();
+  // Should handle the error gracefully (log + 401)
+  expect(console.log).toHaveBeenCalled();
+  expect(res.status).toHaveBeenCalledWith(401);
+  expect(res.send).toHaveBeenCalledWith({ success: false, message: "Unauthorized: Invalid token" });
 
       // Restore environment variable
       process.env.JWT_SECRET = originalSecret;
