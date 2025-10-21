@@ -1,3 +1,27 @@
+/**
+ * Dashboard Component Integration Tests
+ *
+ * This file contains comprehensive integration tests for the user Dashboard component.
+ * It tests the integration between the Dashboard component and various system modules including:
+ * - User authentication and auth context integration
+ * - Layout component integration and page structure
+ * - UserMenu component integration
+ * - React Router navigation compatibility
+ * - Component rendering stability and performance
+ * - Accessibility compliance
+ *
+ * Test Coverage:
+ * - Component rendering and layout structure
+ * - Auth context integration and user data display
+ * - Component hierarchy and integration patterns
+ * - Router compatibility and navigation
+ * - Performance and accessibility standards
+ * - Re-render stability and cleanup
+ *
+ * Summary: 10 integration tests across 10 groups covering component structure,
+ * auth integration, layout rendering, router compatibility, and performance validation.
+ */
+
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
@@ -5,6 +29,13 @@ import Dashboard from "../Dashboard";
 import { AuthProvider } from "../../../context/auth";
 import axios from "axios";
 
+/**
+ * Test utility function that renders the Dashboard component with all necessary providers
+ * and sets up the authentication context with mock user data.
+ *
+ * @param {Object} initialAuth - Mock authentication data to use for testing
+ * @returns {Object} Render result from React Testing Library
+ */
 const renderDashboardWithProviders = (initialAuth = mockAuth) => {
   localStorage.setItem("auth", JSON.stringify(initialAuth));
   return render(
@@ -16,11 +47,11 @@ const renderDashboardWithProviders = (initialAuth = mockAuth) => {
   );
 };
 
-// Mock external dependencies
+// Mock external dependencies to isolate component behavior
 jest.mock("axios");
 jest.mock("react-hot-toast");
 
-// Mock Layout component
+// Mock Layout component to focus on Dashboard-specific logic
 jest.mock("../../../components/Layout", () => {
   return function MockLayout({ title, children }) {
     return (
@@ -32,13 +63,14 @@ jest.mock("../../../components/Layout", () => {
   };
 });
 
-// Mock UserMenu component
+// Mock UserMenu component to focus on integration patterns
 jest.mock("../../../components/UserMenu", () => {
   return function MockUserMenu() {
     return <div data-testid="user-menu">User Menu</div>;
   };
 });
 
+// Test data: Mock authenticated user for dashboard testing
 const mockAuth = {
   user: {
     name: "John Doe",
@@ -48,14 +80,37 @@ const mockAuth = {
   token: "mock-token",
 };
 
+/**
+ * Dashboard Integration Test Suite
+ *
+ * Comprehensive integration testing for the user Dashboard component covering
+ * component rendering, context integration, layout structure, and performance.
+ */
 describe("Dashboard Integration Tests", () => {
+  // Setup clean test environment before each test
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
     axios.defaults = { headers: { common: {} } };
   });
 
+  /**
+   * Integration Test Group #1: Basic Component Rendering
+   *
+   * Tests the fundamental rendering capability of the Dashboard component
+   * to ensure it renders without errors in the testing environment.
+   */
   describe("Integration Test #1: Basic Component Rendering", () => {
+    /**
+     * Test: Component Rendering Stability
+     * Verifies that the Dashboard component can be rendered without throwing
+     * any errors and that the basic layout structure is present.
+     */
+    /**
+     * Test: Component Rendering Stability
+     * Verifies that the Dashboard component can be rendered without throwing
+     * any errors and that the basic layout structure is present.
+     */
     test("should render Dashboard component without crashing", () => {
       renderDashboardWithProviders();
 
@@ -64,7 +119,23 @@ describe("Dashboard Integration Tests", () => {
     });
   });
 
+  /**
+   * Integration Test Group #2: Page Title and Layout Integration
+   *
+   * Tests the integration between the Dashboard component and the Layout component,
+   * specifically focusing on proper title propagation and layout structure.
+   */
   describe("Integration Test #2: Page Title and Layout", () => {
+    /**
+     * Test: Layout Title Integration
+     * Verifies that the Dashboard correctly passes the page title to the Layout
+     * component and that it's rendered properly in the document structure.
+     */
+    /**
+     * Test: Layout Title Integration
+     * Verifies that the Dashboard correctly passes the page title to the Layout
+     * component and that it's rendered properly in the document structure.
+     */
     test("should render correct page title in Layout component", () => {
       renderDashboardWithProviders();
 
@@ -74,7 +145,23 @@ describe("Dashboard Integration Tests", () => {
     });
   });
 
+  /**
+   * Integration Test Group #3: UserMenu Component Integration
+   *
+   * Tests the integration between the Dashboard and UserMenu components,
+   * ensuring proper rendering and accessibility of user navigation elements.
+   */
   describe("Integration Test #3: UserMenu Integration", () => {
+    /**
+     * Test: UserMenu Rendering Integration
+     * Verifies that the UserMenu component is properly integrated within
+     * the Dashboard and renders with expected content.
+     */
+    /**
+     * Test: UserMenu Rendering Integration
+     * Verifies that the UserMenu component is properly integrated within
+     * the Dashboard and renders with expected content.
+     */
     test("should render UserMenu component", () => {
       renderDashboardWithProviders();
 
@@ -85,7 +172,23 @@ describe("Dashboard Integration Tests", () => {
     });
   });
 
+  /**
+   * Integration Test Group #4: Auth Context Data Integration
+   *
+   * Tests the integration between the Dashboard component and the authentication
+   * context, verifying that user data is properly retrieved and displayed.
+   */
   describe("Integration Test #4: User Data Display from Auth Context", () => {
+    /**
+     * Test: User Information Display Integration
+     * Verifies that the Dashboard correctly retrieves and displays user information
+     * from the authentication context including name, email, and address.
+     */
+    /**
+     * Test: User Information Display Integration
+     * Verifies that the Dashboard correctly retrieves and displays user information
+     * from the authentication context including name, email, and address.
+     */
     test("should display user information from auth context", () => {
       renderDashboardWithProviders();
 
@@ -102,7 +205,18 @@ describe("Dashboard Integration Tests", () => {
     });
   });
 
+  /**
+   * Integration Test Group #5: Auth Hook Integration
+   *
+   * Tests the proper integration with the useAuth hook and verifies that
+   * the authentication context is functioning correctly within the component.
+   */
   describe("Integration Test #5: Auth Context Integration", () => {
+    /**
+     * Test: useAuth Hook Integration
+     * Verifies that the Dashboard properly integrates with the useAuth hook
+     * and that user authentication data flows correctly through the component.
+     */
     test("should properly integrate with useAuth hook", () => {
       renderDashboardWithProviders();
 

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import Order from "./orderModel.js";
-import User from "./userModel.js";
+import Order from "../orderModel.js";
+import User from "../userModel.js";
 
 describe("Order Model Integration Tests", () => {
   let mongoServer;
