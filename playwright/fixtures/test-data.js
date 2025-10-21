@@ -56,18 +56,12 @@ export function generateUniqueEmail(prefix = 'test') {
   return `${prefix}${timestamp}@playwright.com`;
 }
 
-// Default data you can reuse in tests that touch categories/products
-export const DEFAULTS = {
-  categorySlug: "electronics",
-  expectedNames: ["Laptop", "Smartphone"], // for your seeded data
-};
 
-// Minimal, stable selectors used across specs
-export const selectors = {
+export const homePageSelectors = {
   filtersColumn: ".filters",
   productCard: "div.card",
   productTitleInCard: "h5, h3, h2",
-  loadMoreBtn: 'button:has-text("Loadmore")', // matches your "Loadmore" button
+  loadMoreBtn: 'button:has-text("Loadmore")',
   productPriceInCard: ".card-price",
 };
 
