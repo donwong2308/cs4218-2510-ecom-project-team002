@@ -388,7 +388,7 @@ To begin unit testing with Jest in your project, follow these steps:
       - Navigate to cart page
       - Update delivery address (street, apartment, city, state, zip)
       - Verify address persistence when returning to cart
-      - **Status:** ✅ PASSING (6/6 phases)
+      - **Status:** PASSING (6/6 phases)
       - **File:** `playwright/e2e/user-profile-integration.spec.js`
 
     - **Suite 2: User Order History Viewing (user-orders.spec.js)** — Order management workflow
@@ -398,7 +398,7 @@ To begin unit testing with Jest in your project, follow these steps:
       - View order history with order details
       - Check order pagination and filters
       - Verify order status and total display
-      - **Status:** ✅ PASSING (6/6 phases)
+      - **Status:** PASSING (6/6 phases)
       - **File:** `playwright/e2e/user-orders.spec.js`
 
     - **Suite 3: Product Details Page (product-details.spec.js)** — Product exploration workflow
@@ -409,7 +409,7 @@ To begin unit testing with Jest in your project, follow these steps:
       - Check quantity selector functionality
       - View related products section
       - Add to cart from product details page
-      - **Status:** ✅ PASSING (7/7 phases)
+      - **Status:** PASSING (7/7 phases)
       - **File:** `playwright/e2e/product-details.spec.js`
 
     - **Suite 4: Homepage Filters (homepage.filters.spec.js)** — Filter & sorting workflow
@@ -419,7 +419,7 @@ To begin unit testing with Jest in your project, follow these steps:
       - Combined category + price filtering
       - Filter removal and list restoration
       - Reset filters functionality
-      - **Status:** ✅ PASSING (6/6 tests)
+      - **Status:** PASSING (6/6 tests)
       - **File:** `playwright/e2e/homepage.filters.spec.js`
 
     - **Test Approach:** Black box testing with real-world user workflows (login → browse → add → checkout)
