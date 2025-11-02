@@ -1,0 +1,10 @@
+# Exclude large test result files
+reports/
+results/
+
+# Exclude JMeter heap dumps
+apache-jmeter-5.6.3/bin/*.hprof
+
+# Keep documentation files
+!README.md
+!*.md

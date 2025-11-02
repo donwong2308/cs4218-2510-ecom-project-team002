@@ -13,9 +13,9 @@ param(
 )
 
 # Configuration
-$PROJECT_ROOT = "C:\Users\donwo\Documents\GitHub\cs4218-2510-ecom-project-team002"
-$JMETER_BIN = "C:\Users\donwo\Downloads\apache-jmeter-5.6.3\apache-jmeter-5.6.3\bin"
-$RESULTS_DIR = Join-Path $PROJECT_ROOT "stress_test\results"
+$PROJECT_ROOT = "C:\Users\User\Documents\GitHub\cs4218-2510-ecom-project-team002"
+$JMETER_BIN = Join-Path $PROJECT_ROOT "stress_test\apache-jmeter-5.6.3\bin"
+$RESULTS_DIR = Join-Path $PROJECT_ROOT "stress_test\reports"
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Magenta

@@ -1,6 +1,5 @@
-productId,name,category,price
-PLACEHOLDER_001,Placeholder Product 1,electronics,999
-PLACEHOLDER_002,Placeholder Product 2,clothing,49
-PLACEHOLDER_003,Placeholder Product 3,books,29
-PLACEHOLDER_004,Placeholder Product 4,electronics,1299
-PLACEHOLDER_005,Placeholder Product 5,home,199
+66db427fdb0119d9234b27f9,Novel,66db427fdb0119d9234b27ef,14.99
+67a2171ea6d9e00ef2ac0229,The Law of Contract,66db427fdb0119d9234b27ef,54.99
+67a21772a6d9e00ef2ac022a,NUS T-shirt,66db427fdb0119d9234b27ee,4.99
+66db427fdb0119d9234b27f5,Smartphone,66db427fdb0119d9234b27ed,999.99
+66db427fdb0119d9234b27f3,Laptop,66db427fdb0119d9234b27ed,1499.99
